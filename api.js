@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Supabase configuration
 const supabaseUrl = 'https://ttylewbnhhhsgtaijqvb.supabase.co';
-const supabaseKey = 'sb_publishable__dylrUDStK0yejyhVNvaKA_Uf32RZkn';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0eWxld2JuaGhoc2d0YWlqcXZiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjY3MTc4NywiZXhwIjoyMDgyMjQ3Nzg3fQ.a4Ft1bBxu1CD59QaJM6rnRyJVbOHks3BcOXFjtk2v_s';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // CORS headers
