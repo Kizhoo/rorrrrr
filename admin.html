@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - To-Kizhoo</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Poppins', sans-serif; background: #0f172a; color: #f1f5f9; }
+    
+    .admin-header { background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); padding: 1rem 2rem; border-bottom: 1px solid rgba(100, 116, 139, 0.3); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .admin-header h1 { font-size: 1.8rem; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 10px; }
+    .header-stats { display: flex; gap: 20px; }
+    .stat-badge { background: rgba(15, 23, 42, 0.7); padding: 8px 15px; border-radius: 8px; display: flex; align-items: center; gap: 8px; }
+    .stat-badge.unread { background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.3); }
+    .stat-badge.priority { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); }
+    .stat-badge.today { background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.3); }
+    
+    .admin-container { display: grid; grid-template-columns: 250px 1fr; min-height: calc(100vh - 70px); }
+    
+    .sidebar { background: rgba(15, 23, 42, 0.9); padding: 2rem 1rem; border-right: 1px solid rgba(100, 116, 139, 0.3); }
+    .nav-item { padding: 12px 15px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: all 0.3s; }
+    .nav-item:hover { background: rgba(30, 41, 59, 0.7); }
+    .nav-item.active { background: #3b82f6; color: white; }
+    .nav-item i { width: 20px; }
+    
+    .filters { padding: 1.5rem; background: rgba(30, 41, 59, 0.7); border-bottom: 1px solid rgba(100, 116, 139, 0.3); }
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+    .filter-group label { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 0.9rem; }
+    select, input { width: 100%; padding: 10px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(100, 116, 139, 0.4); border-radius: 8px; color: #f1f5f9; }
+    .filter-actions { display: flex; gap: 10px; margin-top: 10px; }
+    .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 500; transition: all 0.3s; }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-secondary { background: rgba(100, 116, 139, 0.3); color: #e2e8f0; border: 1px solid rgba(100, 116, 139, 0.5); }
+    .btn-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); }
+    
+    .messages-container { padding: 2rem; overflow-y: auto; max-height: calc(100vh - 200px); }
+    .messages-grid { display: grid; gap: 1.5rem; }
+    
+    .message-card { background: rgba(30, 41, 59, 0.7); border-radius: 12px; padding: 1.5rem; border: 1px solid rgba(100, 116, 139, 0.3); transition: all 0.3s; }
+    .message-card.unread { border-left: 4px solid #3b82f6; background: rgba(59, 130, 246, 0.1); }
+    .message-card.priority { border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.1); }
+    .message-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); }
+    
+    .message-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(100, 116, 139, 0.2); }
+    .message-sender { display: flex; align-items: center; gap: 10px; }
+    .sender-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #8b5cf6); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+    .sender-info h3 { font-size: 1.2rem; color: #f1f5f9; }
+    .sender-info .category { display: inline-block; padding: 3px 10px; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border-radius: 20px; font-size: 0.8rem; margin-top: 5px; }
+    .message-meta { text-align: right; }
+    .message-date { color: #94a3b8; font-size: 0.9rem; margin-bottom: 5px; }
+    .message-status { display: flex; gap: 10px; }
+    .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; }
+    .status-badge.unread { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .status-badge.priority { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    
+    .message-content { margin-bottom: 1.5rem; line-height: 1.6; color: #e2e8f0; }
+    
+    .message-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+    .image-thumb { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: transform 0.3s; }
+    .image-thumb:hover { transform: scale(1.05); }
+    
+    .message-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .action-btn { padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; transition: all 0.3s; }
+    .action-btn.read { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .action-btn.delete { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .action-btn.reply { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .action-btn:hover { transform: translateY(-2px); }
+    
+    .image-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .image-modal.hidden { display: none; }
+    .image-modal-content { max-width: 90%; max-height: 90%; }
+    .image-modal-content img { max-width: 100%; max-height: 90vh; border-radius: 10px; }
+    .close-modal { position: absolute; top: 20px; right: 20px; background: rgba(255, 255, 255, 0.1); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; }
+    
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(100, 116, 139, 0.3); }
+    .page-btn { padding: 8px 15px; background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(100, 116, 139, 0.3); color: #e2e8f0; border-radius: 6px; cursor: pointer; }
+    .page-btn.active { background: #3b82f6; color: white; }
+    .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .login-container { max-width: 400px; margin: 100px auto; padding: 2rem; background: rgba(30, 41, 59, 0.9); border-radius: 20px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3); }
+    .login-header { text-align: center; margin-bottom: 2rem; }
+    .login-header h1 { background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .login-form .form-group { margin-bottom: 1.5rem; }
+    .login-form label { display: block; margin-bottom: 0.5rem; color: #94a3b8; }
+    .login-form input { width: 100%; padding: 12px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(100, 116, 139, 0.4); border-radius: 8px; color: #f1f5f9; }
+    .login-btn { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    
+    @media (max-width: 768px) {
+      .admin-container { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .header-stats { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div id="loginPage" class="login-container">
+    <div class="login-header">
+      <h1><i class="fas fa-lock"></i> Admin To-Kizhoo</h1>
+      <p style="color: #94a3b8; margin-top: 10px;">Masuk ke panel admin</p>
+    </div>
+    <form id="loginForm" class="login-form">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="adminUsername" placeholder="Masukkan username" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="adminPassword" placeholder="Masukkan password" required>
+      </div>
+      <button type="submit" class="login-btn">
+        <i class="fas fa-sign-in-alt"></i> Masuk
+      </button>
+    </form>
+  </div>
+
+  <div id="adminPanel" style="display: none;">
+    <header class="admin-header">
+      <h1><i class="fas fa-cogs"></i> Admin Panel To-Kizhoo</h1>
+      <div class="header-stats">
+        <div class="stat-badge unread">
+          <i class="fas fa-envelope"></i>
+          <span id="unreadStat">0</span> Belum dibaca
+        </div>
+        <div class="stat-badge priority">
+          <i class="fas fa-exclamation-circle"></i>
+          <span id="priorityStat">0</span> Prioritas
+        </div>
+        <div class="stat-badge today">
+          <i class="fas fa-calendar-day"></i>
+          <span id="todayStat">0</span> Hari ini
+        </div>
+      </div>
+    </header>
+
+    <div class="admin-container">
+      <nav class="sidebar">
+        <div class="nav-item active" onclick="showSection('messages')">
+          <i class="fas fa-inbox"></i> Semua Pesan
+        </div>
+        <div class="nav-item" onclick="showSection('unread')">
+          <i class="fas fa-envelope"></i> Belum Dibaca
+        </div>
+        <div class="nav-item" onclick="showSection('priority')">
+          <i class="fas fa-exclamation-circle"></i> Prioritas
+        </div>
+        <div class="nav-item" onclick="showSection('stats')">
+          <i class="fas fa-chart-bar"></i> Statistik
+        </div>
+        <div class="nav-item" onclick="showSection('settings')">
+          <i class="fas fa-cog"></i> Pengaturan
+        </div>
+        <div class="nav-item" onclick="logout()" style="margin-top: 2rem; color: #f87171;">
+          <i class="fas fa-sign-out-alt"></i> Keluar
+        </div>
+      </nav>
+
+      <main>
+        <section id="messagesSection">
+          <div class="filters">
+            <div class="filter-grid">
+              <div class="filter-group">
+                <label>Kategori</label>
+                <select id="filterCategory">
+                  <option value="">Semua Kategori</option>
+                  <option value="umum">Umum</option>
+                  <option value="pujian">Pujian</option>
+                  <option value="kritik">Kritik</option>
+                  <option value="pertanyaan">Pertanyaan</option>
+                  <option value="rahasia">Rahasia</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>Status</label>
+                <select id="filterStatus">
+                  <option value="">Semua Status</option>
+                  <option value="unread">Belum Dibaca</option>
+                  <option value="read">Sudah Dibaca</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>Tanggal</label>
+                <input type="date" id="filterDate">
+              </div>
+              <div class="filter-group">
+                <label>Cari</label>
+                <input type="text" id="filterSearch" placeholder="Cari pesan...">
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button class="btn btn-primary" onclick="loadMessages()">
+                <i class="fas fa-filter"></i> Terapkan Filter
+              </button>
+              <button class="btn btn-secondary" onclick="resetFilters()">
+                <i class="fas fa-redo"></i> Reset
+              </button>
+              <button class="btn btn-danger" onclick="deleteSelected()">
+                <i class="fas fa-trash"></i> Hapus Terpilih
+              </button>
+            </div>
+          </div>
+
+          <div class="messages-container">
+            <div id="messagesGrid" class="messages-grid"></div>
+            
+            <div class="pagination">
+              <button class="page-btn" onclick="changePage(-1)">
+                <i class="fas fa-chevron-left"></i> Sebelumnya
+              </button>
+              <span id="pageInfo" style="color: #94a3b8;">Halaman 1</span>
+              <button class="page-btn" onclick="changePage(1)">
+                Selanjutnya <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section id="statsSection" style="display: none; padding: 2rem;">
+          <h2 style="margin-bottom: 2rem;"><i class="fas fa-chart-bar"></i> Statistik</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+            <div style="background: rgba(30, 41, 59, 0.7); padding: 1.5rem; border-radius: 12px;">
+              <h3 style="color: #94a3b8; margin-bottom: 10px;">Total Pesan</h3>
+              <div style="font-size: 2.5rem; font-weight: bold; color: #60a5fa;" id="statTotal">0</div>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.7); padding: 1.5rem; border-radius: 12px;">
+              <h3 style="color: #94a3b8; margin-bottom: 10px;">Per Kategori</h3>
+              <div id="statCategories"></div>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.7); padding: 1.5rem; border-radius: 12px;">
+              <h3 style="color: #94a3b8; margin-bottom: 10px;">Aktivitas 7 Hari</h3>
+              <div id="statActivity"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div id="imageModal" class="image-modal hidden">
+    <button class="close-modal" onclick="closeImageModal()">
+      <i class="fas fa-times"></i>
+    </button>
+    <div class="image-modal-content">
+      <img id="modalImage" src="" alt="Preview">
+    </div>
+  </div>
+
+  <script>
+    const ADMIN_USERNAME = 'admin';
+    const ADMIN_PASSWORD = 'kizhoo2024';
+    
+    let currentPage = 1;
+    let messagesPerPage = 10;
+    let totalMessages = 0;
+    let selectedMessages = new Set();
+
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const username = document.getElementById('adminUsername').value;
+      const password = document.getElementById('adminPassword').value;
+      
+      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+        localStorage.setItem('adminLoggedIn', 'true');
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('adminPanel').style.display = 'block';
+        loadMessages();
+        loadStats();
+      } else {
+        alert('Username atau password salah!');
+      }
+    });
+
+    function checkLogin() {
+      if (localStorage.getItem('adminLoggedIn') === 'true') {
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('adminPanel').style.display = 'block';
+        loadMessages();
+        loadStats();
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('adminLoggedIn');
+      location.reload();
+    }
+
+    function showSection(section) {
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      document.querySelectorAll('main > section').forEach(sec => sec.style.display = 'none');
+      document.getElementById(section + 'Section').style.display = 'block';
+      
+      if (section === 'stats') {
+        loadStats();
+      }
+    }
+
+    async function loadMessages() {
+      try {
+        const category = document.getElementById('filterCategory').value;
+        const status = document.getElementById('filterStatus').value;
+        const date = document.getElementById('filterDate').value;
+        const search = document.getElementById('filterSearch').value;
+        
+        let url = `/api/messages?page=${currentPage}&limit=${messagesPerPage}`;
+        if (category) url += `&category=${category}`;
+        if (status) url += `&is_read=${status === 'read'}`;
+        if (date) url += `&date=${date}`;
+        if (search) url += `&search=${search}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        renderMessages(data.messages);
+        totalMessages = data.total;
+        updatePagination();
+        updateHeaderStats();
+      } catch (error) {
+        console.error('Error loading messages:', error);
+      }
+    }
+
+    function renderMessages(messages) {
+      const grid = document.getElementById('messagesGrid');
+      grid.innerHTML = '';
+      
+      messages.forEach(message => {
+        const card = document.createElement('div');
+        card.className = `message-card ${message.is_read ? '' : 'unread'} ${message.priority ? 'priority' : ''}`;
+        card.dataset.id = message.id;
+        
+        const date = new Date(message.created_at).toLocaleString('id-ID');
+        const avatarText = message.username.charAt(0).toUpperCase();
+        
+        card.innerHTML = `
+          <div class="message-header">
+            <div class="message-sender">
+              <div class="sender-avatar">${avatarText}</div>
+              <div class="sender-info">
+                <h3>${message.username}</h3>
+                <span class="category">${message.category}</span>
+              </div>
+            </div>
+            <div class="message-meta">
+              <div class="message-date">${date}</div>
+              <div class="message-status">
+                ${!message.is_read ? '<span class="status-badge unread">Belum Dibaca</span>' : ''}
+                ${message.priority ? '<span class="status-badge priority">Prioritas</span>' : ''}
+              </div>
+            </div>
+          </div>
+          
+          <div class="message-content">
+            ${message.message}
+          </div>
+          
+          ${message.photos && message.photos.length > 0 ? `
+            <div class="message-images">
+              ${message.photos.map((photo, index) => `
+                <img src="${photo}" alt="Foto ${index + 1}" class="image-thumb" 
+                     onclick="showImage('${photo}')">
+              `).join('')}
+            </div>
+          ` : ''}
+          
+          <div class="message-actions">
+            ${!message.is_read ? `
+              <button class="action-btn read" onclick="markAsRead('${message.id}')">
+                <i class="fas fa-check"></i> Tandai Sudah Dibaca
+              </button>
+            ` : ''}
+            <button class="action-btn reply" onclick="replyMessage('${message.id}')">
+              <i class="fas fa-reply"></i> Balas
+            </button>
+            <button class="action-btn delete" onclick="deleteMessage('${message.id}')">
+              <i class="fas fa-trash"></i> Hapus
+            </button>
+          </div>
+        `;
+        
+        grid.appendChild(card);
+      });
+    }
+
+    async function markAsRead(messageId) {
+      try {
+        await fetch(`/api/messages/${messageId}/read`, {
+          method: 'PUT'
+        });
+        loadMessages();
+      } catch (error) {
+        console.error('Error marking as read:', error);
+      }
+    }
+
+    async function deleteMessage(messageId) {
+      if (confirm('Apakah Anda yakin ingin menghapus pesan ini?')) {
+        try {
+          await fetch(`/api/messages/${messageId}`, {
+            method: 'DELETE'
+          });
+          loadMessages();
+        } catch (error) {
+          console.error('Error deleting message:', error);
+        }
+      }
+    }
+
+    function replyMessage(messageId) {
+      const messageCard = document.querySelector(`[data-id="${messageId}"]`);
+      const username = messageCard.querySelector('h3').textContent;
+      const message = messageCard.querySelector('.message-content').textContent;
+      
+      const reply = prompt(`Balas pesan dari ${username}:\n\nPesan asli: ${message.substring(0, 100)}...\n\nTulis balasan:`);
+      if (reply) {
+        alert(`Balasan untuk ${username}:\n${reply}\n\n(Balasan akan dikirim jika integrasi email/SMS diaktifkan)`);
+      }
+    }
+
+    function showImage(imageUrl) {
+      document.getElementById('modalImage').src = imageUrl;
+      document.getElementById('imageModal').classList.remove('hidden');
+    }
+
+    function closeImageModal() {
+      document.getElementById('imageModal').classList.add('hidden');
+    }
+
+    function updatePagination() {
+      const totalPages = Math.ceil(totalMessages / messagesPerPage);
+      document.getElementById('pageInfo').textContent = `Halaman ${currentPage} dari ${totalPages}`;
+    }
+
+    function changePage(delta) {
+      const newPage = currentPage + delta;
+      const totalPages = Math.ceil(totalMessages / messagesPerPage);
+      
+      if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        loadMessages();
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById('filterCategory').value = '';
+      document.getElementById('filterStatus').value = '';
+      document.getElementById('filterDate').value = '';
+      document.getElementById('filterSearch').value = '';
+      loadMessages();
+    }
+
+    async function updateHeaderStats() {
+      try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        
+        document.getElementById('unreadStat').textContent = data.unread || 0;
+        document.getElementById('priorityStat').textContent = data.priority || 0;
+        document.getElementById('todayStat').textContent = data.today || 0;
+      } catch (error) {
+        console.error('Error updating stats:', error);
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/stats/detailed');
+        const data = await response.json();
+        
+        document.getElementById('statTotal').textContent = data.total || 0;
+        
+        if (data.categories) {
+          const categoriesHtml = Object.entries(data.categories).map(([cat, count]) => `
+            <div style="margin-bottom: 5px;">
+              <span style="color: #94a3b8;">${cat}: </span>
+              <span style="color: #60a5fa; font-weight: bold;">${count}</span>
+            </div>
+          `).join('');
+          document.getElementById('statCategories').innerHTML = categoriesHtml;
+        }
+        
+        if (data.activity) {
+          const activityHtml = Object.entries(data.activity).map(([date, count]) => `
+            <div style="margin-bottom: 5px;">
+              <span style="color: #94a3b8;">${date}: </span>
+              <span style="color: #4ade80; font-weight: bold;">${count}</span>
+            </div>
+          `).join('');
+          document.getElementById('statActivity').innerHTML = activityHtml;
+        }
+      } catch (error) {
+        console.error('Error loading detailed stats:', error);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', checkLogin);
+  </script>
+</body>
+</html>
