@@ -1,387 +1,218 @@
 // Vercel Serverless API untuk To-Kizhoo
-// Simpan sebagai /api/index.js di Vercel
+// Simpan sebagai /api/messages.js di Vercel
 
 import { createClient } from '@supabase/supabase-js';
-import { v4 as uuidv4 } from 'uuid';
 
 // Supabase configuration
 const supabaseUrl = 'https://ttylewbnhhhsgtaijqvb.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0eWxld2JuaGhoc2d0YWlqcXZiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjY3MTc4NywiZXhwIjoyMDgyMjQ3Nzg3fQ.a4Ft1bBxu1CD59QaJM6rnRyJVbOHks3BcOXFjtk2v_s';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+// Helper untuk response JSON
+const jsonResponse = (data, status = 200) => {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 };
 
-export default async function handler(req, res) {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).json({}, corsHeaders);
-  }
-
-  // Set CORS headers untuk semua response
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    res.setHeader(key, value);
-  });
-
+// GET /api/stats
+export async function GET(req) {
   try {
-    // Routing berdasarkan path
-    const path = req.url.split('?')[0];
-    
-    switch (path) {
-      case '/api/messages':
-        if (req.method === 'GET') {
-          await handleGetMessages(req, res);
-        } else if (req.method === 'POST') {
-          await handlePostMessage(req, res);
-        } else {
-          res.status(405).json({ error: 'Method not allowed' });
-        }
-        break;
-        
-      case '/api/stats':
-        await handleGetStats(req, res);
-        break;
-        
-      case '/api/stats/detailed':
-        await handleGetDetailedStats(req, res);
-        break;
-        
-      default:
-        // Handle dynamic routes
-        if (path.startsWith('/api/messages/')) {
-          const messageId = path.split('/')[3];
-          
-          if (path.endsWith('/read')) {
-            await handleMarkAsRead(req, res, messageId);
-          } else {
-            if (req.method === 'DELETE') {
-              await handleDeleteMessage(req, res, messageId);
-            } else if (req.method === 'PUT') {
-              await handleUpdateMessage(req, res, messageId);
-            } else {
-              res.status(405).json({ error: 'Method not allowed' });
-            }
-          }
-        } else {
-          res.status(404).json({ error: 'Endpoint not found' });
-        }
-    }
-  } catch (error) {
-    console.error('API Error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message 
-    });
-  }
-}
-
-// 1. GET /api/messages - Get messages with filters
-async function handleGetMessages(req, res) {
-  try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      category, 
-      is_read, 
-      date,
-      search 
-    } = req.query;
-    
-    let query = supabase
+    // Get total messages
+    const { count: total, error: totalError } = await supabase
       .from('messages')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range((page - 1) * limit, page * limit - 1);
+      .select('*', { count: 'exact', head: true });
     
-    // Apply filters
-    if (category) {
-      query = query.eq('category', category);
-    }
+    if (totalError) throw totalError;
     
-    if (is_read !== undefined) {
-      query = query.eq('is_read', is_read === 'true');
-    }
+    // Get today's messages
+    const today = new Date().toISOString().split('T')[0];
+    const { count: todayCount, error: todayError } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', `${today}T00:00:00Z`)
+      .lte('created_at', `${today}T23:59:59Z`);
     
-    if (date) {
-      query = query.gte('created_at', `${date}T00:00:00Z`)
-                   .lte('created_at', `${date}T23:59:59Z`);
-    }
+    if (todayError) throw todayError;
     
-    if (search) {
-      query = query.or(`username.ilike.%${search}%,message.ilike.%${search}%`);
-    }
+    // Get unread messages
+    const { count: unread, error: unreadError } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_read', false);
     
-    const { data: messages, error, count } = await query;
+    if (unreadError) throw unreadError;
     
-    if (error) throw error;
-    
-    res.status(200).json({
-      messages: messages || [],
-      total: count || 0,
-      page: parseInt(page),
-      limit: parseInt(limit),
-      totalPages: Math.ceil((count || 0) / limit)
+    return jsonResponse({
+      success: true,
+      total: total || 0,
+      today: todayCount || 0,
+      unread: unread || 0,
+      timestamp: new Date().toISOString()
     });
     
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Stats error:', error);
+    return jsonResponse({
+      success: false,
+      error: error.message
+    }, 500);
   }
 }
 
-// 2. POST /api/messages - Create new message
-async function handlePostMessage(req, res) {
+// POST /api/messages
+export async function POST(req) {
   try {
-    // Handle multipart form data untuk file upload
-    if (req.headers['content-type']?.includes('multipart/form-data')) {
-      await handleMultipartMessage(req, res);
-    } else {
-      // Handle JSON data
-      const { username, message, category = 'umum', priority = false } = req.body;
-      
-      if (!username || !message) {
-        return res.status(400).json({ error: 'Username dan message diperlukan' });
-      }
-      
-      const { data, error } = await supabase
-        .from('messages')
-        .insert([{
-          username,
-          message,
-          category,
-          priority,
-          is_read: false,
-          ip_address: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
-          user_agent: req.headers['user-agent']
-        }])
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      res.status(201).json({
-        success: true,
-        message: 'Pesan berhasil disimpan',
-        data
-      });
+    const body = await req.json();
+    
+    const { username, message, category = 'umum', priority = false, photos = [] } = body;
+    
+    // Validasi input
+    if (!username || !message) {
+      return jsonResponse({
+        success: false,
+        error: 'Username dan message diperlukan'
+      }, 400);
     }
     
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
-
-// 3. Handle multipart form data dengan file upload
-async function handleMultipartMessage(req, res) {
-  try {
-    // Di production, gunakan multer atau busboy untuk parse form-data
-    // Ini contoh sederhana untuk Vercel Serverless
-    const formData = await parseFormData(req);
+    // Validasi panjang pesan
+    if (message.length > 500) {
+      return jsonResponse({
+        success: false,
+        error: 'Pesan maksimal 500 karakter'
+      }, 400);
+    }
     
-    const { username, message, category = 'umum', priority = false } = formData.fields;
-    const photos = [];
+    // Validasi photos jika ada
+    if (photos.length > 5) {
+      return jsonResponse({
+        success: false,
+        error: 'Maksimal 5 foto yang dapat diupload'
+      }, 400);
+    }
     
-    // Handle file uploads ke Supabase Storage
-    if (formData.files && formData.files.length > 0) {
-      for (const file of formData.files) {
-        const fileExt = file.originalname.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExt}`;
+    // Validasi base64 photos
+    const validPhotos = [];
+    for (const photo of photos) {
+      if (typeof photo === 'string' && photo.startsWith('data:image')) {
+        // Validasi ukuran base64 (maksimal 5MB setelah encode)
+        const base64Length = photo.length - (photo.indexOf(',') + 1);
+        const padding = photo.endsWith('==') ? 2 : photo.endsWith('=') ? 1 : 0;
+        const fileSizeInBytes = (base64Length * 3) / 4 - padding;
         
-        const { data, error } = await supabase.storage
-          .from('message-images')
-          .upload(fileName, file.buffer, {
-            contentType: file.mimetype,
-            upsert: false
-          });
-        
-        if (!error) {
-          const { data: { publicUrl } } = supabase.storage
-            .from('message-images')
-            .getPublicUrl(fileName);
-          
-          photos.push(publicUrl);
+        if (fileSizeInBytes <= 5 * 1024 * 1024) { // 5MB
+          validPhotos.push(photo);
+        } else {
+          console.warn('Photo too large, skipping');
         }
       }
     }
     
+    // Insert ke database
     const { data, error } = await supabase
       .from('messages')
       .insert([{
-        username,
-        message,
-        category,
-        priority: priority === 'true',
-        photos: photos.length > 0 ? photos : null,
+        username: username.trim(),
+        message: message.trim(),
+        category: category.trim(),
+        priority: Boolean(priority),
+        photos: validPhotos.length > 0 ? validPhotos : null,
         is_read: false,
-        ip_address: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
-        user_agent: req.headers['user-agent']
+        ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+        user_agent: req.headers.get('user-agent') || 'unknown'
       }])
       .select()
       .single();
     
     if (error) throw error;
     
-    res.status(201).json({
+    // Update analytics (async, jangan tunggu)
+    updateAnalytics();
+    
+    return jsonResponse({
       success: true,
-      message: 'Pesan berhasil disimpan',
-      data
-    });
-    
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
-
-// 4. Helper untuk parse form-data (sederhana)
-async function parseFormData(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    
-    req.on('data', chunk => chunks.push(chunk));
-    req.on('end', () => {
-      try {
-        const buffer = Buffer.concat(chunks);
-        // Implementasi parsing form-data sederhana
-        // Di production, gunakan library seperti busboy
-        resolve({
-          fields: {
-            username: 'Sample User',
-            message: 'Sample message',
-            category: 'umum',
-            priority: 'false'
-          },
-          files: []
-        });
-      } catch (error) {
-        reject(error);
+      message: 'Pesan berhasil dikirim',
+      data: {
+        id: data.id,
+        username: data.username,
+        category: data.category,
+        created_at: data.created_at
       }
-    });
-    req.on('error', reject);
-  });
-}
-
-// 5. PUT /api/messages/:id/read - Mark as read
-async function handleMarkAsRead(req, res, messageId) {
-  try {
-    const { error } = await supabase
-      .from('messages')
-      .update({ is_read: true })
-      .eq('id', messageId);
+    }, 201);
     
-    if (error) throw error;
-    
-    res.status(200).json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
-
-// 6. DELETE /api/messages/:id - Delete message
-async function handleDeleteMessage(req, res, messageId) {
-  try {
-    const { error } = await supabase
-      .from('messages')
-      .delete()
-      .eq('id', messageId);
+    console.error('POST error:', error);
     
-    if (error) throw error;
+    // Handle specific Supabase errors
+    let errorMessage = 'Gagal menyimpan pesan';
+    let statusCode = 500;
     
-    res.status(200).json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
-
-// 7. GET /api/stats - Get statistics
-async function handleGetStats(req, res) {
-  try {
-    const { data, error } = await supabase.rpc('get_message_stats');
-    
-    if (error) throw error;
-    
-    res.status(200).json(data[0] || {
-      total: 0,
-      unread: 0,
-      priority: 0,
-      today: 0
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
-
-// 8. GET /api/stats/detailed - Get detailed statistics
-async function handleGetDetailedStats(req, res) {
-  try {
-    // Get total count
-    const { count: total } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true });
-    
-    // Get counts by category
-    const { data: categoryData } = await supabase
-      .from('messages')
-      .select('category')
-      .not('is_archived', 'eq', true);
-    
-    const categories = {};
-    if (categoryData) {
-      categoryData.forEach(msg => {
-        categories[msg.category] = (categories[msg.category] || 0) + 1;
-      });
+    if (error.code === '23505') {
+      errorMessage = 'Data duplikat terdeteksi';
+      statusCode = 409;
+    } else if (error.code === '23502') {
+      errorMessage = 'Data tidak lengkap';
+      statusCode = 400;
     }
     
-    // Get activity for last 7 days
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const { data: activityData } = await supabase
-      .from('messages')
-      .select('created_at')
-      .gte('created_at', sevenDaysAgo.toISOString());
-    
-    const activity = {};
-    if (activityData) {
-      activityData.forEach(msg => {
-        const date = new Date(msg.created_at).toLocaleDateString('id-ID');
-        activity[date] = (activity[date] || 0) + 1;
-      });
-    }
-    
-    res.status(200).json({
-      total: total || 0,
-      categories,
-      activity,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    return jsonResponse({
+      success: false,
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    }, statusCode);
   }
 }
 
-// 9. PUT /api/messages/:id - Update message
-async function handleUpdateMessage(req, res, messageId) {
+// Fungsi helper untuk update analytics (async)
+async function updateAnalytics() {
   try {
-    const updates = req.body;
+    const today = new Date().toISOString().split('T')[0];
     
-    const { data, error } = await supabase
-      .from('messages')
-      .update(updates)
-      .eq('id', messageId)
-      .select()
+    // Cek apakah sudah ada data untuk hari ini
+    const { data: existing } = await supabase
+      .from('analytics')
+      .select('*')
+      .eq('date', today)
       .single();
     
-    if (error) throw error;
-    
-    res.status(200).json({ success: true, data });
+    if (existing) {
+      // Update existing
+      await supabase
+        .from('analytics')
+        .update({
+          total_messages: existing.total_messages + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id);
+    } else {
+      // Insert new
+      await supabase
+        .from('analytics')
+        .insert([{
+          date: today,
+          total_messages: 1,
+          unread_messages: 1
+        }]);
+    }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Analytics update error:', error);
   }
 }
 
-// 10. Export untuk Vercel
-module.exports = handler;
+// Handle OPTIONS untuk CORS
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+    }
