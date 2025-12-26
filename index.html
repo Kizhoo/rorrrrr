@@ -10,6 +10,30 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); color: #f1f5f9; min-height: 100vh; }
     
+    /* ADMIN BUTTON */
+    .admin-floating-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 5px 20px rgba(139, 92, 246, 0.4);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .admin-floating-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(139, 92, 246, 0.6);
+    }
+    
     .animated-bg { position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: -1; overflow: hidden; }
     .shape { position: absolute; border-radius: 50%; background: linear-gradient(45deg, #2563eb33, #0891b233); filter: blur(40px); animation: float 15s infinite linear; }
     .shape-1 { width: 400px; height: 400px; top: -100px; left: -100px; }
@@ -22,7 +46,7 @@
       75% { transform: translate(-30px, 50px) rotate(270deg); }
     }
     
-    .header { text-align: center; padding: 2rem 1rem 1rem; max-width: 800px; margin: 0 auto; }
+    .header { text-align: center; padding: 2rem 1rem 1rem; max-width: 800px; margin: 0 auto; position: relative; }
     .logo { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 10px; }
     .logo i { font-size: 2.5rem; color: #60a5fa; background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .logo h1 { font-size: 2.8rem; font-weight: 700; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -57,6 +81,7 @@
     
     .upload-area { position: relative; border: 2px dashed rgba(100, 116, 139, 0.5); border-radius: 15px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s ease; background: rgba(15, 23, 42, 0.3); margin-bottom: 1.5rem; }
     .upload-area:hover { border-color: #60a5fa; background: rgba(15, 23, 42, 0.5); }
+    .upload-area.dragover { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
     .upload-icon { font-size: 3rem; color: #60a5fa; margin-bottom: 1rem; }
     .upload-text { font-size: 1.1rem; color: #e2e8f0; margin-bottom: 0.5rem; }
     .browse-link { color: #60a5fa; font-weight: 600; text-decoration: underline; cursor: pointer; }
@@ -126,10 +151,16 @@
       .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
       .logo h1 { font-size: 2.2rem; }
       .form-card { padding: 1.5rem; }
+      .admin-floating-btn { top: 10px; right: 10px; padding: 10px 15px; font-size: 0.9rem; }
     }
   </style>
 </head>
 <body>
+  <!-- Tombol Admin Floating -->
+  <a href="admin.html" class="admin-floating-btn">
+    <i class="fas fa-lock"></i> Panel Admin
+  </a>
+
   <div class="animated-bg">
     <div class="shape shape-1"></div>
     <div class="shape shape-2"></div>
@@ -188,7 +219,7 @@
         <div class="upload-area" id="uploadArea">
           <i class="fas fa-cloud-upload-alt upload-icon"></i>
           <p class="upload-text">Seret & Jatuhkan gambar di sini atau <span class="browse-link">klik untuk memilih</span></p>
-          <p class="upload-hint">Format: JPG, PNG, GIF (Maks. 2MB per file)</p>
+          <p class="upload-hint">Format: JPG, PNG, GIF, WebP (Maks. 5MB per file)</p>
           <input type="file" id="photo" multiple accept="image/*" class="file-input">
         </div>
         
@@ -249,6 +280,10 @@
       </div>
       <h3 class="loading-title">Menyimpan Pesan...</h3>
       <p class="loading-text">Harap tunggu sebentar, pesan Anda sedang disimpan</p>
+      <div class="progress-bar">
+        <div class="progress-fill" id="uploadProgress"></div>
+      </div>
+      <p id="uploadStatus" class="progress-text">Mempersiapkan...</p>
     </div>
   </div>
 
@@ -282,22 +317,47 @@
   </footer>
 
   <script>
-    const supabaseUrl = 'https://ttylewbnhhhsgtaijqvb.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0eWxld2JuaGhoc2d0YWlqcXZiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjY3MTc4NywiZXhwIjoyMDgyMjQ3Nzg3fQ.a4Ft1bBxu1CD59QaJM6rnRyJVbOHks3BcOXFjtk2v_s';
+    // Konfigurasi Supabase
+    const SUPABASE_URL = 'https://ttylewbnhhhsgtaijqvb.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0eWxld2JuaGhoc2d0YWlqcXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2NzE3ODcsImV4cCI6MjA4MjI0Nzc4N30.48xoSEHlCD5Ar4ICMtCRZNJwEidPAvVfSRRUPH__hX8';
     
+    // Inisialisasi state
     let files = [];
     let selectedCategory = 'umum';
+    let isUploading = false;
 
+    // DOM Elements
+    const elements = {
+      username: document.getElementById('username'),
+      message: document.getElementById('message'),
+      category: document.getElementById('category'),
+      priority: document.getElementById('priority'),
+      charCount: document.getElementById('charCount'),
+      uploadArea: document.getElementById('uploadArea'),
+      previewContainer: document.getElementById('previewContainer'),
+      previewBox: document.getElementById('previewBox'),
+      clearAllBtn: document.getElementById('clearAllBtn'),
+      sendBtn: document.getElementById('sendBtn'),
+      loadingOverlay: document.getElementById('loadingOverlay'),
+      uploadProgress: document.getElementById('uploadProgress'),
+      uploadStatus: document.getElementById('uploadStatus'),
+      messagesSent: document.getElementById('messagesSent'),
+      todayMessages: document.getElementById('todayMessages'),
+      unreadCount: document.getElementById('unreadCount')
+    };
+
+    // Initialize
     document.addEventListener('DOMContentLoaded', function() {
       loadStatistics();
       setupEventListeners();
       
+      // Set kategori default
       document.querySelectorAll('.category-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
           this.classList.add('active');
           selectedCategory = this.dataset.category;
-          document.getElementById('category').value = selectedCategory;
+          elements.category.value = selectedCategory;
         });
       });
       
@@ -305,75 +365,119 @@
     });
 
     function setupEventListeners() {
-      document.getElementById('message').addEventListener('input', updateCharCount);
-      document.getElementById('uploadArea').addEventListener('dragover', handleDragOver);
-      document.getElementById('uploadArea').addEventListener('dragleave', handleDragLeave);
-      document.getElementById('uploadArea').addEventListener('drop', handleDrop);
+      elements.message.addEventListener('input', updateCharCount);
+      
+      // Drag and drop events
+      elements.uploadArea.addEventListener('dragover', handleDragOver);
+      elements.uploadArea.addEventListener('dragleave', handleDragLeave);
+      elements.uploadArea.addEventListener('drop', handleDrop);
+      
+      // File input events
       document.getElementById('photo').addEventListener('change', handleFileSelect);
-      document.getElementById('clearAllBtn').addEventListener('click', clearAllFiles);
+      
+      // Button events
+      elements.clearAllBtn.addEventListener('click', clearAllFiles);
       document.getElementById('newMessageBtn').addEventListener('click', resetForm);
       document.getElementById('closeModalBtn').addEventListener('click', () => {
         document.getElementById('successModal').classList.remove('show');
       });
+      
+      // Klik area upload
+      elements.uploadArea.querySelector('.browse-link').addEventListener('click', () => {
+        document.getElementById('photo').click();
+      });
     }
 
     function updateCharCount() {
-      const message = document.getElementById('message');
-      const count = message.value.length;
-      document.getElementById('charCount').textContent = `${count}/500`;
-      document.getElementById('charCount').style.color = count > 450 ? '#f87171' : '#94a3b8';
+      const count = elements.message.value.length;
+      elements.charCount.textContent = `${count}/500`;
+      elements.charCount.style.color = count > 450 ? '#f87171' : 
+                                     count > 400 ? '#fbbf24' : '#94a3b8';
     }
 
     function handleDragOver(e) {
       e.preventDefault();
-      e.currentTarget.classList.add('dragover');
+      e.stopPropagation();
+      elements.uploadArea.classList.add('dragover');
     }
 
     function handleDragLeave(e) {
       e.preventDefault();
-      e.currentTarget.classList.remove('dragover');
+      e.stopPropagation();
+      elements.uploadArea.classList.remove('dragover');
     }
 
     function handleDrop(e) {
       e.preventDefault();
-      e.currentTarget.classList.remove('dragover');
-      handleFiles(e.dataTransfer.files);
+      e.stopPropagation();
+      elements.uploadArea.classList.remove('dragover');
+      
+      const droppedFiles = e.dataTransfer.files;
+      handleFiles(droppedFiles);
     }
 
     function handleFileSelect(e) {
-      handleFiles(e.target.files);
+      const selectedFiles = e.target.files;
+      handleFiles(selectedFiles);
     }
 
     function handleFiles(fileList) {
-      const newFiles = Array.from(fileList).filter(file => 
-        file.type.startsWith('image/') && file.size <= 2 * 1024 * 1024
-      ).slice(0, 5 - files.length);
+      const newFiles = Array.from(fileList).filter(file => {
+        // Validasi tipe file dan ukuran
+        const isValidType = file.type.startsWith('image/');
+        const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB
+        
+        if (!isValidType) {
+          showToast(`File ${file.name} bukan gambar!`, 'error');
+          return false;
+        }
+        
+        if (!isValidSize) {
+          showToast(`File ${file.name} terlalu besar! Maksimal 5MB`, 'error');
+          return false;
+        }
+        
+        return true;
+      });
       
-      files.push(...newFiles);
-      updatePreview();
+      // Batasi maksimal 5 file
+      if (files.length + newFiles.length > 5) {
+        showToast('Maksimal 5 file gambar yang dapat diunggah', 'warning');
+        newFiles.length = 5 - files.length;
+      }
       
-      if (files.length > 0) {
-        document.getElementById('previewContainer').classList.add('show');
+      if (newFiles.length > 0) {
+        files.push(...newFiles);
+        updatePreview();
+        elements.previewContainer.classList.add('show');
+        showToast(`Berhasil menambahkan ${newFiles.length} file`, 'success');
       }
     }
 
     function updatePreview() {
-      const previewBox = document.getElementById('previewBox');
-      previewBox.innerHTML = '';
+      elements.previewBox.innerHTML = '';
       
       files.forEach((file, index) => {
         const reader = new FileReader();
+        
         reader.onload = (e) => {
-          const item = document.createElement('div');
-          item.className = 'preview-item';
-          item.innerHTML = `
-            <img src="${e.target.result}" alt="Preview">
-            <div class="remove-btn" onclick="removeFile(${index})">
-              <i class="fas fa-times"></i>
-            </div>
-          `;
-          previewBox.appendChild(item);
+          const previewItem = document.createElement('div');
+          previewItem.className = 'preview-item';
+          
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.alt = `Preview ${index + 1}`;
+          
+          const removeBtn = document.createElement('div');
+          removeBtn.className = 'remove-btn';
+          removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+          removeBtn.addEventListener('click', () => removeFile(index));
+          
+          previewItem.appendChild(img);
+          previewItem.appendChild(removeBtn);
+          elements.previewBox.appendChild(previewItem);
         };
+        
         reader.readAsDataURL(file);
       });
     }
@@ -381,26 +485,101 @@
     function removeFile(index) {
       files.splice(index, 1);
       updatePreview();
+      
       if (files.length === 0) {
-        document.getElementById('previewContainer').classList.remove('show');
+        elements.previewContainer.classList.remove('show');
       }
     }
 
     function clearAllFiles() {
       files = [];
       document.getElementById('photo').value = '';
-      document.getElementById('previewContainer').classList.remove('show');
-      updatePreview();
+      elements.previewContainer.classList.remove('show');
+      elements.previewBox.innerHTML = '';
+      showToast('Semua file telah dihapus', 'success');
+    }
+
+    // Fungsi untuk compress gambar
+    async function compressImage(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            // Resize jika terlalu besar
+            const MAX_WIDTH = 1200;
+            const MAX_HEIGHT = 1200;
+            
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+              }
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Kompres dengan kualitas 80%
+            canvas.toBlob((blob) => {
+              resolve(blob);
+            }, 'image/jpeg', 0.8);
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Fungsi untuk convert file ke base64
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
     }
 
     async function loadStatistics() {
       try {
-        const response = await fetch('/api/stats');
-        const data = await response.json();
+        // Simpan statistik di localStorage untuk caching
+        const cachedStats = localStorage.getItem('messageStats');
+        if (cachedStats) {
+          const stats = JSON.parse(cachedStats);
+          elements.messagesSent.textContent = stats.total || 0;
+          elements.todayMessages.textContent = stats.today || 0;
+          elements.unreadCount.textContent = stats.unread || 0;
+        }
         
-        document.getElementById('messagesSent').textContent = data.total || 0;
-        document.getElementById('todayMessages').textContent = data.today || 0;
-        document.getElementById('unreadCount').textContent = data.unread || 0;
+        // Fetch data terbaru dari API
+        const response = await fetch('/api/stats');
+        if (response.ok) {
+          const data = await response.json();
+          elements.messagesSent.textContent = data.total || 0;
+          elements.todayMessages.textContent = data.today || 0;
+          elements.unreadCount.textContent = data.unread || 0;
+          
+          // Cache hasil
+          localStorage.setItem('messageStats', JSON.stringify({
+            total: data.total || 0,
+            today: data.today || 0,
+            unread: data.unread || 0,
+            timestamp: Date.now()
+          }));
+        }
       } catch (error) {
         console.error('Error loading stats:', error);
       }
@@ -413,42 +592,62 @@
       
       toastMessage.textContent = message;
       toast.className = `toast ${type}`;
-      toastIcon.innerHTML = type === 'success' ? '<i class="fas fa-check-circle"></i>' :
-                         type === 'error' ? '<i class="fas fa-exclamation-circle"></i>' :
-                         '<i class="fas fa-exclamation-triangle"></i>';
+      
+      let iconClass = 'fas fa-check-circle';
+      if (type === 'error') iconClass = 'fas fa-exclamation-circle';
+      if (type === 'warning') iconClass = 'fas fa-exclamation-triangle';
+      
+      toastIcon.innerHTML = `<i class="${iconClass}"></i>`;
       
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
+    function updateProgress(progress, status) {
+      if (elements.uploadProgress) {
+        elements.uploadProgress.style.width = `${progress}%`;
+      }
+      if (elements.uploadStatus) {
+        elements.uploadStatus.textContent = status;
+      }
+    }
+
     function showLoading() {
-      document.getElementById('loadingOverlay').classList.remove('hidden');
-      document.getElementById('sendBtn').disabled = true;
-      document.getElementById('sendBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengirim...';
+      isUploading = true;
+      elements.sendBtn.disabled = true;
+      elements.sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengirim...';
+      elements.loadingOverlay.classList.remove('hidden');
+      updateProgress(0, 'Mempersiapkan data...');
     }
 
     function hideLoading() {
-      document.getElementById('loadingOverlay').classList.add('hidden');
-      document.getElementById('sendBtn').disabled = false;
-      document.getElementById('sendBtn').innerHTML = '<i class="fas fa-paper-plane"></i> Kirim Pesan';
+      isUploading = false;
+      elements.sendBtn.disabled = false;
+      elements.sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Kirim Pesan';
+      setTimeout(() => {
+        elements.loadingOverlay.classList.add('hidden');
+      }, 500);
     }
 
     function validateForm() {
-      const username = document.getElementById('username').value.trim();
-      const message = document.getElementById('message').value.trim();
+      const username = elements.username.value.trim();
+      const message = elements.message.value.trim();
       
       if (!username) {
         showToast('Nama wajib diisi!', 'error');
+        elements.username.focus();
         return false;
       }
       
       if (!message) {
         showToast('Pesan wajib diisi!', 'error');
+        elements.message.focus();
         return false;
       }
       
       if (message.length > 500) {
         showToast('Pesan maksimal 500 karakter!', 'error');
+        elements.message.focus();
         return false;
       }
       
@@ -456,65 +655,130 @@
     }
 
     function resetForm() {
-      document.getElementById('username').value = '';
-      document.getElementById('message').value = '';
-      document.getElementById('category').value = 'umum';
-      document.getElementById('priority').checked = false;
+      elements.username.value = '';
+      elements.message.value = '';
+      elements.priority.checked = false;
       clearAllFiles();
       updateCharCount();
       document.getElementById('successModal').classList.remove('show');
       
       document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
       document.querySelector('.category-btn[data-category="umum"]').classList.add('active');
+      selectedCategory = 'umum';
+      elements.category.value = 'umum';
+      
+      elements.username.focus();
     }
 
     async function sendMessage() {
+      if (isUploading) return;
       if (!validateForm()) return;
       
       showLoading();
       
       try {
-        const username = document.getElementById('username').value.trim();
-        const message = document.getElementById('message').value.trim();
-        const priority = document.getElementById('priority').checked;
+        const username = elements.username.value.trim();
+        const message = elements.message.value.trim();
+        const priority = elements.priority.checked;
         
-        const formData = new FormData();
-        formData.append('username', username);
-        formData.append('message', message);
-        formData.append('category', selectedCategory);
-        formData.append('priority', priority);
-        formData.append('is_read', false);
+        // Siapkan data pesan
+        const messageData = {
+          username,
+          message,
+          category: selectedCategory,
+          priority,
+          is_read: false
+        };
         
-        files.forEach((file, index) => {
-          formData.append(`photos_${index}`, file);
-        });
+        // Handle file upload jika ada
+        let photoBase64 = [];
+        if (files.length > 0) {
+          updateProgress(30, 'Mengompresi gambar...');
+          
+          // Kompres dan convert setiap file ke base64
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            
+            // Kompres gambar jika perlu
+            let processedFile = file;
+            if (file.size > 1024 * 1024) { // Jika > 1MB, kompres
+              processedFile = await compressImage(file);
+            }
+            
+            // Convert ke base64
+            const base64 = await fileToBase64(processedFile);
+            photoBase64.push(base64);
+            
+            // Update progress
+            const progress = 30 + ((i + 1) / files.length) * 50;
+            updateProgress(progress, `Mengupload gambar ${i + 1}/${files.length}...`);
+          }
+          
+          messageData.photos = photoBase64;
+        }
         
+        updateProgress(90, 'Menyimpan pesan ke database...');
+        
+        // Kirim ke API
         const response = await fetch('/api/messages', {
           method: 'POST',
-          body: formData
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(messageData)
         });
         
         if (!response.ok) {
-          throw new Error('Gagal menyimpan pesan');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Gagal mengirim pesan');
         }
         
         const result = await response.json();
         
-        hideLoading();
-        showToast('Pesan berhasil dikirim!', 'success');
+        updateProgress(100, 'Pesan berhasil dikirim!');
         
         setTimeout(() => {
+          hideLoading();
+          showToast('Pesan berhasil dikirim!', 'success');
           document.getElementById('successModal').classList.add('show');
-        }, 500);
-        
-        loadStatistics();
+          loadStatistics(); // Refresh statistics
+        }, 1000);
         
       } catch (error) {
         hideLoading();
-        showToast('Gagal mengirim pesan: ' + error.message, 'error');
+        showToast(`Gagal mengirim pesan: ${error.message}`, 'error');
         console.error('Error:', error);
       }
     }
+
+    // Supabase Client (untuk future enhancement)
+    window.supabaseClient = {
+      uploadImage: async function(file) {
+        // Implementasi upload ke Supabase Storage
+        const fileName = `${Date.now()}-${file.name}`;
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+          const response = await fetch(`${SUPABASE_URL}/storage/v1/object/message-images/${fileName}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+            body: formData
+          });
+          
+          if (response.ok) {
+            const { data } = await response.json();
+            return `${SUPABASE_URL}/storage/v1/object/public/message-images/${fileName}`;
+          }
+          throw new Error('Upload failed');
+        } catch (error) {
+          console.error('Upload error:', error);
+          throw error;
+        }
+      }
+    };
   </script>
 </body>
   </html>
