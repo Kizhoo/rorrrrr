@@ -8,80 +8,374 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Poppins', sans-serif; background: #0f172a; color: #f1f5f9; }
+    body { font-family: 'Poppins', sans-serif; background: #0f172a; color: #f1f5f9; min-height: 100vh; }
     
-    .admin-header { background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); padding: 1rem 2rem; border-bottom: 1px solid rgba(100, 116, 139, 0.3); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-    .admin-header h1 { font-size: 1.8rem; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 10px; }
-    .header-stats { display: flex; gap: 20px; }
-    .stat-badge { background: rgba(15, 23, 42, 0.7); padding: 8px 15px; border-radius: 8px; display: flex; align-items: center; gap: 8px; }
+    /* Loading Screen */
+    #initialLoading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #0f172a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    
+    .loading-spinner {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .spinner-circle {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #60a5fa;
+      animation: bounce 1.2s infinite ease-in-out;
+    }
+    
+    .spinner-circle:nth-child(1) { animation-delay: -0.32s; }
+    .spinner-circle:nth-child(2) { animation-delay: -0.16s; }
+    .spinner-circle:nth-child(3) { animation-delay: 0s; }
+    
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+    
+    .admin-header { 
+      background: rgba(30, 41, 59, 0.95); 
+      backdrop-filter: blur(10px); 
+      padding: 1rem 2rem; 
+      border-bottom: 1px solid rgba(100, 116, 139, 0.3); 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      position: sticky; 
+      top: 0; 
+      z-index: 100; 
+    }
+    
+    .admin-header h1 { 
+      font-size: 1.8rem; 
+      background: linear-gradient(135deg, #60a5fa, #a78bfa); 
+      -webkit-background-clip: text; 
+      -webkit-text-fill-color: transparent; 
+      display: flex; 
+      align-items: center; 
+      gap: 10px; 
+    }
+    
+    .header-stats { 
+      display: flex; 
+      gap: 20px; 
+    }
+    
+    .stat-badge { 
+      background: rgba(15, 23, 42, 0.7); 
+      padding: 8px 15px; 
+      border-radius: 8px; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+    }
+    
     .stat-badge.unread { background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.3); }
     .stat-badge.priority { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); }
     .stat-badge.today { background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.3); }
     
-    .admin-container { display: grid; grid-template-columns: 250px 1fr; min-height: calc(100vh - 70px); }
+    .admin-container { 
+      display: grid; 
+      grid-template-columns: 250px 1fr; 
+      min-height: calc(100vh - 70px); 
+    }
     
-    .sidebar { background: rgba(15, 23, 42, 0.9); padding: 2rem 1rem; border-right: 1px solid rgba(100, 116, 139, 0.3); }
-    .nav-item { padding: 12px 15px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: all 0.3s; }
+    .sidebar { 
+      background: rgba(15, 23, 42, 0.9); 
+      padding: 2rem 1rem; 
+      border-right: 1px solid rgba(100, 116, 139, 0.3); 
+    }
+    
+    .nav-item { 
+      padding: 12px 15px; 
+      margin-bottom: 8px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      display: flex; 
+      align-items: center; 
+      gap: 10px; 
+      transition: all 0.3s; 
+    }
+    
     .nav-item:hover { background: rgba(30, 41, 59, 0.7); }
     .nav-item.active { background: #3b82f6; color: white; }
     .nav-item i { width: 20px; }
     
-    .filters { padding: 1.5rem; background: rgba(30, 41, 59, 0.7); border-bottom: 1px solid rgba(100, 116, 139, 0.3); }
-    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
-    .filter-group label { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 0.9rem; }
-    select, input { width: 100%; padding: 10px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(100, 116, 139, 0.4); border-radius: 8px; color: #f1f5f9; }
-    .filter-actions { display: flex; gap: 10px; margin-top: 10px; }
-    .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 500; transition: all 0.3s; }
+    .filters { 
+      padding: 1.5rem; 
+      background: rgba(30, 41, 59, 0.7); 
+      border-bottom: 1px solid rgba(100, 116, 139, 0.3); 
+    }
+    
+    .filter-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+      gap: 15px; 
+      margin-bottom: 15px; 
+    }
+    
+    .filter-group label { 
+      display: block; 
+      margin-bottom: 5px; 
+      color: #94a3b8; 
+      font-size: 0.9rem; 
+    }
+    
+    select, input { 
+      width: 100%; 
+      padding: 10px; 
+      background: rgba(15, 23, 42, 0.7); 
+      border: 1px solid rgba(100, 116, 139, 0.4); 
+      border-radius: 8px; 
+      color: #f1f5f9; 
+    }
+    
+    .filter-actions { 
+      display: flex; 
+      gap: 10px; 
+      margin-top: 10px; 
+    }
+    
+    .btn { 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      border: none; 
+      cursor: pointer; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+      font-weight: 500; 
+      transition: all 0.3s; 
+    }
+    
     .btn-primary { background: #3b82f6; color: white; }
     .btn-secondary { background: rgba(100, 116, 139, 0.3); color: #e2e8f0; border: 1px solid rgba(100, 116, 139, 0.5); }
     .btn-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
     .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); }
     
-    .messages-container { padding: 2rem; overflow-y: auto; max-height: calc(100vh - 200px); }
-    .messages-grid { display: grid; gap: 1.5rem; }
+    .messages-container { 
+      padding: 2rem; 
+      overflow-y: auto; 
+      max-height: calc(100vh - 200px); 
+    }
     
-    .message-card { background: rgba(30, 41, 59, 0.7); border-radius: 12px; padding: 1.5rem; border: 1px solid rgba(100, 116, 139, 0.3); transition: all 0.3s; }
-    .message-card.unread { border-left: 4px solid #3b82f6; background: rgba(59, 130, 246, 0.1); }
-    .message-card.priority { border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.1); }
-    .message-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); }
+    .messages-grid { 
+      display: grid; 
+      gap: 1.5rem; 
+    }
     
-    .message-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(100, 116, 139, 0.2); }
-    .message-sender { display: flex; align-items: center; gap: 10px; }
-    .sender-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #8b5cf6); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-    .sender-info h3 { font-size: 1.2rem; color: #f1f5f9; }
-    .sender-info .category { display: inline-block; padding: 3px 10px; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border-radius: 20px; font-size: 0.8rem; margin-top: 5px; }
-    .message-meta { text-align: right; }
-    .message-date { color: #94a3b8; font-size: 0.9rem; margin-bottom: 5px; }
-    .message-status { display: flex; gap: 10px; }
-    .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; }
+    .message-card { 
+      background: rgba(30, 41, 59, 0.7); 
+      border-radius: 12px; 
+      padding: 1.5rem; 
+      border: 1px solid rgba(100, 116, 139, 0.3); 
+      transition: all 0.3s; 
+    }
+    
+    .message-card.unread { 
+      border-left: 4px solid #3b82f6; 
+      background: rgba(59, 130, 246, 0.1); 
+    }
+    
+    .message-card.priority { 
+      border-left: 4px solid #ef4444; 
+      background: rgba(239, 68, 68, 0.1); 
+    }
+    
+    .message-card:hover { 
+      transform: translateY(-3px); 
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); 
+    }
+    
+    .message-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: flex-start; 
+      margin-bottom: 1rem; 
+      padding-bottom: 1rem; 
+      border-bottom: 1px solid rgba(100, 116, 139, 0.2); 
+    }
+    
+    .message-sender { 
+      display: flex; 
+      align-items: center; 
+      gap: 10px; 
+    }
+    
+    .sender-avatar { 
+      width: 40px; 
+      height: 40px; 
+      border-radius: 50%; 
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      color: white; 
+      font-weight: bold; 
+    }
+    
+    .sender-info h3 { 
+      font-size: 1.2rem; 
+      color: #f1f5f9; 
+    }
+    
+    .sender-info .category { 
+      display: inline-block; 
+      padding: 3px 10px; 
+      background: rgba(59, 130, 246, 0.2); 
+      color: #60a5fa; 
+      border-radius: 20px; 
+      font-size: 0.8rem; 
+      margin-top: 5px; 
+    }
+    
+    .message-meta { 
+      text-align: right; 
+    }
+    
+    .message-date { 
+      color: #94a3b8; 
+      font-size: 0.9rem; 
+      margin-bottom: 5px; 
+    }
+    
+    .message-status { 
+      display: flex; 
+      gap: 10px; 
+    }
+    
+    .status-badge { 
+      padding: 4px 10px; 
+      border-radius: 20px; 
+      font-size: 0.8rem; 
+    }
+    
     .status-badge.unread { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
     .status-badge.priority { background: rgba(239, 68, 68, 0.2); color: #f87171; }
     
-    .message-content { margin-bottom: 1.5rem; line-height: 1.6; color: #e2e8f0; }
+    .message-content { 
+      margin-bottom: 1.5rem; 
+      line-height: 1.6; 
+      color: #e2e8f0; 
+      white-space: pre-wrap;
+    }
     
-    .message-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
-    .image-thumb { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: transform 0.3s; }
+    .message-images { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+      gap: 10px; 
+      margin-bottom: 1.5rem; 
+    }
+    
+    .image-thumb { 
+      width: 100%; 
+      height: 150px; 
+      object-fit: cover; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      transition: transform 0.3s; 
+    }
+    
     .image-thumb:hover { transform: scale(1.05); }
     
-    .message-actions { display: flex; gap: 10px; justify-content: flex-end; }
-    .action-btn { padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; transition: all 0.3s; }
+    .message-actions { 
+      display: flex; 
+      gap: 10px; 
+      justify-content: flex-end; 
+    }
+    
+    .action-btn { 
+      padding: 8px 15px; 
+      border-radius: 6px; 
+      border: none; 
+      cursor: pointer; 
+      display: flex; 
+      align-items: center; 
+      gap: 5px; 
+      font-size: 0.9rem; 
+      transition: all 0.3s; 
+    }
+    
     .action-btn.read { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
     .action-btn.delete { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
     .action-btn.reply { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
     .action-btn:hover { transform: translateY(-2px); }
     
-    .image-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .image-modal { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      background: rgba(0, 0, 0, 0.9); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 1000; 
+    }
+    
     .image-modal.hidden { display: none; }
     .image-modal-content { max-width: 90%; max-height: 90%; }
     .image-modal-content img { max-width: 100%; max-height: 90vh; border-radius: 10px; }
-    .close-modal { position: absolute; top: 20px; right: 20px; background: rgba(255, 255, 255, 0.1); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; }
     
-    .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(100, 116, 139, 0.3); }
-    .page-btn { padding: 8px 15px; background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(100, 116, 139, 0.3); color: #e2e8f0; border-radius: 6px; cursor: pointer; }
+    .close-modal { 
+      position: absolute; 
+      top: 20px; 
+      right: 20px; 
+      background: rgba(255, 255, 255, 0.1); 
+      color: white; 
+      border: none; 
+      width: 40px; 
+      height: 40px; 
+      border-radius: 50%; 
+      cursor: pointer; 
+      font-size: 1.5rem; 
+    }
+    
+    .pagination { 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      gap: 10px; 
+      margin-top: 2rem; 
+      padding-top: 2rem; 
+      border-top: 1px solid rgba(100, 116, 139, 0.3); 
+    }
+    
+    .page-btn { 
+      padding: 8px 15px; 
+      background: rgba(30, 41, 59, 0.7); 
+      border: 1px solid rgba(100, 116, 139, 0.3); 
+      color: #e2e8f0; 
+      border-radius: 6px; 
+      cursor: pointer; 
+    }
+    
     .page-btn.active { background: #3b82f6; color: white; }
     .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     
-    .login-container { max-width: 400px; margin: 100px auto; padding: 2rem; background: rgba(30, 41, 59, 0.9); border-radius: 20px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3); }
+    .login-container { 
+      max-width: 400px; 
+      margin: 100px auto; 
+      padding: 2rem; 
+      background: rgba(30, 41, 59, 0.9); 
+      border-radius: 20px; 
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3); 
+    }
+    
     .login-header { text-align: center; margin-bottom: 2rem; }
     .login-header h1 { background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .login-form .form-group { margin-bottom: 1.5rem; }
@@ -89,15 +383,65 @@
     .login-form input { width: 100%; padding: 12px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(100, 116, 139, 0.4); border-radius: 8px; color: #f1f5f9; }
     .login-btn { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
     
+    .empty-state { 
+      text-align: center; 
+      padding: 4rem 2rem; 
+      color: #94a3b8; 
+    }
+    
+    .empty-state i { 
+      font-size: 4rem; 
+      margin-bottom: 1rem; 
+      color: #475569; 
+    }
+    
+    .toast { 
+      position: fixed; 
+      bottom: 30px; 
+      left: 50%; 
+      transform: translateX(-50%) translateY(100px); 
+      background: rgba(30, 41, 59, 0.95); 
+      backdrop-filter: blur(10px); 
+      border-radius: 12px; 
+      padding: 0; 
+      min-width: 300px; 
+      max-width: 90%; 
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); 
+      border: 1px solid rgba(100, 116, 139, 0.3); 
+      z-index: 1001; 
+      opacity: 0; 
+      transition: transform 0.4s ease, opacity 0.4s ease; 
+      overflow: hidden; 
+    }
+    
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast-content { display: flex; align-items: center; padding: 18px 20px; gap: 15px; }
+    .toast-icon { font-size: 1.5rem; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .toast.success .toast-icon { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+    .toast.error .toast-icon { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    .toast.warning .toast-icon { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .toast-message { font-size: 1rem; color: #f1f5f9; }
+    
     @media (max-width: 768px) {
       .admin-container { grid-template-columns: 1fr; }
       .sidebar { display: none; }
       .header-stats { flex-wrap: wrap; }
+      .filter-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <div id="loginPage" class="login-container">
+  <!-- Initial Loading -->
+  <div id="initialLoading">
+    <div class="loading-spinner">
+      <div class="spinner-circle"></div>
+      <div class="spinner-circle"></div>
+      <div class="spinner-circle"></div>
+    </div>
+  </div>
+
+  <!-- Login Page -->
+  <div id="loginPage" class="login-container" style="display: none;">
     <div class="login-header">
       <h1><i class="fas fa-lock"></i> Admin To-Kizhoo</h1>
       <p style="color: #94a3b8; margin-top: 10px;">Masuk ke panel admin</p>
@@ -117,6 +461,7 @@
     </form>
   </div>
 
+  <!-- Admin Panel -->
   <div id="adminPanel" style="display: none;">
     <header class="admin-header">
       <h1><i class="fas fa-cogs"></i> Admin Panel To-Kizhoo</h1>
@@ -150,15 +495,13 @@
         <div class="nav-item" onclick="showSection('stats')">
           <i class="fas fa-chart-bar"></i> Statistik
         </div>
-        <div class="nav-item" onclick="showSection('settings')">
-          <i class="fas fa-cog"></i> Pengaturan
-        </div>
         <div class="nav-item" onclick="logout()" style="margin-top: 2rem; color: #f87171;">
           <i class="fas fa-sign-out-alt"></i> Keluar
         </div>
       </nav>
 
       <main>
+        <!-- Messages Section -->
         <section id="messagesSection">
           <div class="filters">
             <div class="filter-grid">
@@ -197,27 +540,25 @@
               <button class="btn btn-secondary" onclick="resetFilters()">
                 <i class="fas fa-redo"></i> Reset
               </button>
-              <button class="btn btn-danger" onclick="deleteSelected()">
-                <i class="fas fa-trash"></i> Hapus Terpilih
-              </button>
             </div>
           </div>
 
           <div class="messages-container">
             <div id="messagesGrid" class="messages-grid"></div>
             
-            <div class="pagination">
-              <button class="page-btn" onclick="changePage(-1)">
+            <div id="paginationContainer" class="pagination" style="display: none;">
+              <button class="page-btn" onclick="changePage(-1)" id="prevBtn">
                 <i class="fas fa-chevron-left"></i> Sebelumnya
               </button>
               <span id="pageInfo" style="color: #94a3b8;">Halaman 1</span>
-              <button class="page-btn" onclick="changePage(1)">
+              <button class="page-btn" onclick="changePage(1)" id="nextBtn">
                 Selanjutnya <i class="fas fa-chevron-right"></i>
               </button>
             </div>
           </div>
         </section>
 
+        <!-- Stats Section -->
         <section id="statsSection" style="display: none; padding: 2rem;">
           <h2 style="margin-bottom: 2rem;"><i class="fas fa-chart-bar"></i> Statistik</h2>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
@@ -239,6 +580,7 @@
     </div>
   </div>
 
+  <!-- Image Modal -->
   <div id="imageModal" class="image-modal hidden">
     <button class="close-modal" onclick="closeImageModal()">
       <i class="fas fa-times"></i>
@@ -248,192 +590,367 @@
     </div>
   </div>
 
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">
+    <div class="toast-content">
+      <i class="toast-icon"></i>
+      <div class="toast-message"></div>
+    </div>
+  </div>
+
   <script>
-    const ADMIN_USERNAME = 'admin';
-    const ADMIN_PASSWORD = 'kizhoo2024';
-    
+    // ===== KONFIGURASI =====
+    const ADMIN_TOKEN = '1602'; // Harus sama dengan di Vercel Environment Variables
     let currentPage = 1;
     let messagesPerPage = 10;
     let totalMessages = 0;
-    let selectedMessages = new Set();
+    let currentFilter = 'all';
+    let isLoading = false;
 
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
+    // ===== DOM ELEMENTS =====
+    const elements = {
+      initialLoading: document.getElementById('initialLoading'),
+      loginPage: document.getElementById('loginPage'),
+      adminPanel: document.getElementById('adminPanel'),
+      messagesGrid: document.getElementById('messagesGrid'),
+      paginationContainer: document.getElementById('paginationContainer'),
+      prevBtn: document.getElementById('prevBtn'),
+      nextBtn: document.getElementById('nextBtn'),
+      pageInfo: document.getElementById('pageInfo'),
+      unreadStat: document.getElementById('unreadStat'),
+      priorityStat: document.getElementById('priorityStat'),
+      todayStat: document.getElementById('todayStat'),
+      statTotal: document.getElementById('statTotal'),
+      statCategories: document.getElementById('statCategories'),
+      statActivity: document.getElementById('statActivity'),
+      filterCategory: document.getElementById('filterCategory'),
+      filterStatus: document.getElementById('filterStatus'),
+      filterDate: document.getElementById('filterDate'),
+      filterSearch: document.getElementById('filterSearch')
+    };
+
+    // ===== INITIALIZATION =====
+    document.addEventListener('DOMContentLoaded', function() {
+      // Hide initial loading after 500ms
+      setTimeout(() => {
+        elements.initialLoading.style.display = 'none';
+        checkLogin();
+      }, 500);
+      
+      // Setup event listeners
+      setupEventListeners();
+    });
+
+    function setupEventListeners() {
+      // Login form submission
+      document.getElementById('loginForm').addEventListener('submit', handleLogin);
+      
+      // Filter input events (enter key)
+      elements.filterSearch.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') loadMessages();
+      });
+      
+      elements.filterDate.addEventListener('change', loadMessages);
+    }
+
+    // ===== LOGIN SYSTEM =====
+    function checkLogin() {
+      const isLoggedIn = localStorage.getItem('adminLoggedIn');
+      const adminToken = localStorage.getItem('adminToken');
+      
+      if (isLoggedIn === 'true' && adminToken) {
+        // Verify token masih valid
+        if (adminToken === ADMIN_TOKEN) {
+          showAdminPanel();
+        } else {
+          showLoginPage();
+          showToast('Session expired, silakan login kembali', 'warning');
+        }
+      } else {
+        showLoginPage();
+      }
+    }
+
+    function handleLogin(e) {
       e.preventDefault();
       
       const username = document.getElementById('adminUsername').value;
       const password = document.getElementById('adminPassword').value;
       
-      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      // Simple validation (di production gunakan API call ke backend)
+      if (username === 'admin' && password === 'kizhoo2024') {
+        // Simpan token di localStorage
+        localStorage.setItem('adminToken', ADMIN_TOKEN);
         localStorage.setItem('adminLoggedIn', 'true');
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('adminPanel').style.display = 'block';
-        loadMessages();
-        loadStats();
+        localStorage.setItem('adminUsername', username);
+        
+        showAdminPanel();
+        showToast('Login berhasil!', 'success');
       } else {
-        alert('Username atau password salah!');
+        showToast('Username atau password salah!', 'error');
       }
-    });
+    }
 
-    function checkLogin() {
-      if (localStorage.getItem('adminLoggedIn') === 'true') {
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('adminPanel').style.display = 'block';
-        loadMessages();
-        loadStats();
-      }
+    function showLoginPage() {
+      elements.loginPage.style.display = 'block';
+      elements.adminPanel.style.display = 'none';
+    }
+
+    function showAdminPanel() {
+      elements.loginPage.style.display = 'none';
+      elements.adminPanel.style.display = 'block';
+      loadMessages();
+      loadStats();
     }
 
     function logout() {
-      localStorage.removeItem('adminLoggedIn');
-      location.reload();
-    }
-
-    function showSection(section) {
-      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-      event.target.classList.add('active');
-      
-      document.querySelectorAll('main > section').forEach(sec => sec.style.display = 'none');
-      document.getElementById(section + 'Section').style.display = 'block';
-      
-      if (section === 'stats') {
-        loadStats();
+      if (confirm('Apakah Anda yakin ingin keluar?')) {
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminLoggedIn');
+        localStorage.removeItem('adminUsername');
+        window.location.reload();
       }
     }
 
+    // ===== MESSAGES FUNCTIONS =====
     async function loadMessages() {
+      if (isLoading) return;
+      
+      isLoading = true;
+      showLoadingState();
+      
       try {
-        const category = document.getElementById('filterCategory').value;
-        const status = document.getElementById('filterStatus').value;
-        const date = document.getElementById('filterDate').value;
-        const search = document.getElementById('filterSearch').value;
+        const category = elements.filterCategory.value;
+        const status = elements.filterStatus.value;
+        const date = elements.filterDate.value;
+        const search = elements.filterSearch.value;
         
-        let url = `/api/messages?page=${currentPage}&limit=${messagesPerPage}`;
-        if (category) url += `&category=${category}`;
-        if (status) url += `&is_read=${status === 'read'}`;
-        if (date) url += `&date=${date}`;
-        if (search) url += `&search=${search}`;
+        // Build query parameters
+        let queryParams = `page=${currentPage}&limit=${messagesPerPage}`;
+        if (category) queryParams += `&category=${category}`;
+        if (status === 'unread') queryParams += `&is_read=false`;
+        if (status === 'read') queryParams += `&is_read=true`;
+        if (date) queryParams += `&date=${date}`;
+        if (search) queryParams += `&search=${encodeURIComponent(search)}`;
         
-        const response = await fetch(url);
+        console.log('Fetching messages with params:', queryParams);
+        
+        const response = await fetch(`/api/messages?${queryParams}`, {
+          headers: {
+            'Authorization': `Bearer ${ADMIN_TOKEN}`
+          }
+        });
+        
+        console.log('Response status:', response.status);
+        
+        if (response.status === 401) {
+          showToast('Session expired, silakan login kembali', 'error');
+          logout();
+          return;
+        }
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
+        console.log('Messages data:', data);
         
-        renderMessages(data.messages);
-        totalMessages = data.total;
-        updatePagination();
-        updateHeaderStats();
+        if (data.success) {
+          renderMessages(data.messages);
+          totalMessages = data.total || 0;
+          updatePagination();
+          updateHeaderStats();
+        } else {
+          throw new Error(data.error || 'Gagal memuat pesan');
+        }
       } catch (error) {
         console.error('Error loading messages:', error);
+        showErrorState('Gagal memuat pesan: ' + error.message);
+      } finally {
+        isLoading = false;
       }
+    }
+
+    function showLoadingState() {
+      elements.messagesGrid.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-spinner fa-spin"></i>
+          <h3>Memuat pesan...</h3>
+          <p>Harap tunggu sebentar</p>
+        </div>
+      `;
+    }
+
+    function showErrorState(message) {
+      elements.messagesGrid.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-exclamation-triangle"></i>
+          <h3>Terjadi Kesalahan</h3>
+          <p>${message}</p>
+          <button onclick="loadMessages()" class="btn btn-primary" style="margin-top: 1rem;">
+            <i class="fas fa-redo"></i> Coba Lagi
+          </button>
+        </div>
+      `;
     }
 
     function renderMessages(messages) {
-      const grid = document.getElementById('messagesGrid');
-      grid.innerHTML = '';
-      
-      messages.forEach(message => {
-        const card = document.createElement('div');
-        card.className = `message-card ${message.is_read ? '' : 'unread'} ${message.priority ? 'priority' : ''}`;
-        card.dataset.id = message.id;
-        
-        const date = new Date(message.created_at).toLocaleString('id-ID');
-        const avatarText = message.username.charAt(0).toUpperCase();
-        
-        card.innerHTML = `
-          <div class="message-header">
-            <div class="message-sender">
-              <div class="sender-avatar">${avatarText}</div>
-              <div class="sender-info">
-                <h3>${message.username}</h3>
-                <span class="category">${message.category}</span>
-              </div>
-            </div>
-            <div class="message-meta">
-              <div class="message-date">${date}</div>
-              <div class="message-status">
-                ${!message.is_read ? '<span class="status-badge unread">Belum Dibaca</span>' : ''}
-                ${message.priority ? '<span class="status-badge priority">Prioritas</span>' : ''}
-              </div>
-            </div>
-          </div>
-          
-          <div class="message-content">
-            ${message.message}
-          </div>
-          
-          ${message.photos && message.photos.length > 0 ? `
-            <div class="message-images">
-              ${message.photos.map((photo, index) => `
-                <img src="${photo}" alt="Foto ${index + 1}" class="image-thumb" 
-                     onclick="showImage('${photo}')">
-              `).join('')}
-            </div>
-          ` : ''}
-          
-          <div class="message-actions">
-            ${!message.is_read ? `
-              <button class="action-btn read" onclick="markAsRead('${message.id}')">
-                <i class="fas fa-check"></i> Tandai Sudah Dibaca
-              </button>
-            ` : ''}
-            <button class="action-btn reply" onclick="replyMessage('${message.id}')">
-              <i class="fas fa-reply"></i> Balas
-            </button>
-            <button class="action-btn delete" onclick="deleteMessage('${message.id}')">
-              <i class="fas fa-trash"></i> Hapus
-            </button>
+      if (!messages || messages.length === 0) {
+        elements.messagesGrid.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <h3>Tidak ada pesan</h3>
+            <p>Tidak ada pesan yang ditemukan dengan filter ini</p>
+            ${elements.filterSearch.value || elements.filterCategory.value || elements.filterStatus.value || elements.filterDate.value 
+              ? '<button onclick="resetFilters()" class="btn btn-secondary" style="margin-top: 1rem;"><i class="fas fa-redo"></i> Reset Filter</button>' 
+              : ''}
           </div>
         `;
+        elements.paginationContainer.style.display = 'none';
+        return;
+      }
+      
+      elements.paginationContainer.style.display = 'flex';
+      
+      const messagesHTML = messages.map(message => {
+        const date = new Date(message.created_at).toLocaleString('id-ID', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
         
-        grid.appendChild(card);
-      });
+        const avatarText = message.username?.charAt(0).toUpperCase() || '?';
+        
+        // Parse photos jika ada
+        let photosHTML = '';
+        if (message.photos && Array.isArray(message.photos) && message.photos.length > 0) {
+          const photoThumbs = message.photos.map((photo, index) => {
+            // Handle base64 atau URL gambar
+            const imageSrc = photo.startsWith('data:') ? photo : photo;
+            return `
+              <img src="${imageSrc}" 
+                   alt="Foto ${index + 1}" 
+                   class="image-thumb" 
+                   onclick="showImage('${imageSrc.replace(/'/g, "\\'")}')">
+            `;
+          }).join('');
+          
+          photosHTML = `<div class="message-images">${photoThumbs}</div>`;
+        }
+        
+        // Status badges
+        const statusBadges = [];
+        if (!message.is_read) {
+          statusBadges.push('<span class="status-badge unread">Belum Dibaca</span>');
+        }
+        if (message.priority) {
+          statusBadges.push('<span class="status-badge priority">Prioritas</span>');
+        }
+        
+        return `
+          <div class="message-card ${!message.is_read ? 'unread' : ''} ${message.priority ? 'priority' : ''}" data-id="${message.id}">
+            <div class="message-header">
+              <div class="message-sender">
+                <div class="sender-avatar">${avatarText}</div>
+                <div class="sender-info">
+                  <h3>${escapeHtml(message.username || 'Anonim')}</h3>
+                  <span class="category">${escapeHtml(message.category || 'umum')}</span>
+                </div>
+              </div>
+              <div class="message-meta">
+                <div class="message-date">${date}</div>
+                ${statusBadges.length > 0 ? `<div class="message-status">${statusBadges.join('')}</div>` : ''}
+              </div>
+            </div>
+            
+            <div class="message-content">
+              ${escapeHtml(message.message || '').replace(/\n/g, '<br>')}
+            </div>
+            
+            ${photosHTML}
+            
+            <div class="message-actions">
+              ${!message.is_read ? `
+                <button class="action-btn read" onclick="markAsRead('${message.id}')">
+                  <i class="fas fa-check"></i> Tandai Dibaca
+                </button>
+              ` : ''}
+              <button class="action-btn delete" onclick="deleteMessage('${message.id}')">
+                <i class="fas fa-trash"></i> Hapus
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      elements.messagesGrid.innerHTML = messagesHTML;
     }
 
     async function markAsRead(messageId) {
       try {
-        await fetch(`/api/messages/${messageId}/read`, {
-          method: 'PUT'
+        const response = await fetch(`/api/messages/${messageId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${ADMIN_TOKEN}`
+          },
+          body: JSON.stringify({ is_read: true })
         });
-        loadMessages();
+        
+        if (response.ok) {
+          showToast('Pesan ditandai sebagai sudah dibaca', 'success');
+          loadMessages(); // Reload messages
+        } else {
+          const error = await response.json();
+          throw new Error(error.error || 'Gagal memperbarui');
+        }
       } catch (error) {
         console.error('Error marking as read:', error);
+        showToast('Gagal: ' + error.message, 'error');
       }
     }
 
     async function deleteMessage(messageId) {
-      if (confirm('Apakah Anda yakin ingin menghapus pesan ini?')) {
-        try {
-          await fetch(`/api/messages/${messageId}`, {
-            method: 'DELETE'
-          });
-          loadMessages();
-        } catch (error) {
-          console.error('Error deleting message:', error);
-        }
+      if (!confirm('Apakah Anda yakin ingin menghapus pesan ini? Tindakan ini tidak dapat dibatalkan.')) {
+        return;
       }
-    }
-
-    function replyMessage(messageId) {
-      const messageCard = document.querySelector(`[data-id="${messageId}"]`);
-      const username = messageCard.querySelector('h3').textContent;
-      const message = messageCard.querySelector('.message-content').textContent;
       
-      const reply = prompt(`Balas pesan dari ${username}:\n\nPesan asli: ${message.substring(0, 100)}...\n\nTulis balasan:`);
-      if (reply) {
-        alert(`Balasan untuk ${username}:\n${reply}\n\n(Balasan akan dikirim jika integrasi email/SMS diaktifkan)`);
+      try {
+        const response = await fetch(`/api/messages/${messageId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${ADMIN_TOKEN}`
+          }
+        });
+        
+        if (response.ok) {
+          showToast('Pesan berhasil dihapus', 'success');
+          loadMessages(); // Reload messages
+        } else {
+          const error = await response.json();
+          throw new Error(error.error || 'Gagal menghapus');
+        }
+      } catch (error) {
+        console.error('Error deleting message:', error);
+        showToast('Gagal menghapus: ' + error.message, 'error');
       }
     }
 
-    function showImage(imageUrl) {
-      document.getElementById('modalImage').src = imageUrl;
-      document.getElementById('imageModal').classList.remove('hidden');
-    }
-
-    function closeImageModal() {
-      document.getElementById('imageModal').classList.add('hidden');
-    }
-
+    // ===== PAGINATION =====
     function updatePagination() {
       const totalPages = Math.ceil(totalMessages / messagesPerPage);
-      document.getElementById('pageInfo').textContent = `Halaman ${currentPage} dari ${totalPages}`;
+      
+      elements.pageInfo.textContent = `Halaman ${currentPage} dari ${totalPages}`;
+      
+      elements.prevBtn.disabled = currentPage <= 1;
+      elements.nextBtn.disabled = currentPage >= totalPages;
+      
+      // Show/hide pagination based on total pages
+      elements.paginationContainer.style.display = totalPages > 1 ? 'flex' : 'none';
     }
 
     function changePage(delta) {
@@ -443,62 +960,144 @@
       if (newPage >= 1 && newPage <= totalPages) {
         currentPage = newPage;
         loadMessages();
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }
 
+    // ===== FILTERS =====
     function resetFilters() {
-      document.getElementById('filterCategory').value = '';
-      document.getElementById('filterStatus').value = '';
-      document.getElementById('filterDate').value = '';
-      document.getElementById('filterSearch').value = '';
+      elements.filterCategory.value = '';
+      elements.filterStatus.value = '';
+      elements.filterDate.value = '';
+      elements.filterSearch.value = '';
+      currentPage = 1;
       loadMessages();
     }
 
-    async function updateHeaderStats() {
-      try {
-        const response = await fetch('/api/stats');
-        const data = await response.json();
-        
-        document.getElementById('unreadStat').textContent = data.unread || 0;
-        document.getElementById('priorityStat').textContent = data.priority || 0;
-        document.getElementById('todayStat').textContent = data.today || 0;
-      } catch (error) {
-        console.error('Error updating stats:', error);
-      }
-    }
-
+    // ===== STATISTICS =====
     async function loadStats() {
       try {
-        const response = await fetch('/api/stats/detailed');
-        const data = await response.json();
+        // Load basic stats
+        const statsResponse = await fetch('/api/stats');
+        const statsData = await statsResponse.json();
         
-        document.getElementById('statTotal').textContent = data.total || 0;
-        
-        if (data.categories) {
-          const categoriesHtml = Object.entries(data.categories).map(([cat, count]) => `
-            <div style="margin-bottom: 5px;">
-              <span style="color: #94a3b8;">${cat}: </span>
-              <span style="color: #60a5fa; font-weight: bold;">${count}</span>
-            </div>
-          `).join('');
-          document.getElementById('statCategories').innerHTML = categoriesHtml;
+        if (statsData.success) {
+          elements.unreadStat.textContent = statsData.unread || 0;
+          elements.priorityStat.textContent = statsData.priority || 0;
+          elements.todayStat.textContent = statsData.today || 0;
+          elements.statTotal.textContent = statsData.total || 0;
         }
         
-        if (data.activity) {
-          const activityHtml = Object.entries(data.activity).map(([date, count]) => `
-            <div style="margin-bottom: 5px;">
-              <span style="color: #94a3b8;">${date}: </span>
-              <span style="color: #4ade80; font-weight: bold;">${count}</span>
-            </div>
-          `).join('');
-          document.getElementById('statActivity').innerHTML = activityHtml;
+        // Load detailed stats
+        const detailedResponse = await fetch('/api/stats/detailed');
+        if (detailedResponse.ok) {
+          const detailedData = await detailedResponse.json();
+          
+          if (detailedData.categories) {
+            const categoriesHTML = Object.entries(detailedData.categories).map(([cat, count]) => `
+              <div style="margin-bottom: 5px;">
+                <span style="color: #94a3b8;">${escapeHtml(cat)}: </span>
+                <span style="color: #60a5fa; font-weight: bold;">${count}</span>
+              </div>
+            `).join('');
+            elements.statCategories.innerHTML = categoriesHTML;
+          }
+          
+          if (detailedData.activity) {
+            const activityHTML = Object.entries(detailedData.activity).map(([date, count]) => `
+              <div style="margin-bottom: 5px;">
+                <span style="color: #94a3b8;">${date}: </span>
+                <span style="color: #4ade80; font-weight: bold;">${count}</span>
+              </div>
+            `).join('');
+            elements.statActivity.innerHTML = activityHTML;
+          }
         }
       } catch (error) {
-        console.error('Error loading detailed stats:', error);
+        console.error('Error loading stats:', error);
       }
     }
 
-    document.addEventListener('DOMContentLoaded', checkLogin);
+    function updateHeaderStats() {
+      // Stats akan diupdate oleh loadStats()
+    }
+
+    // ===== NAVIGATION =====
+    function showSection(section) {
+      // Update active nav item
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      event.target.closest('.nav-item').classList.add('active');
+      
+      // Hide all sections
+      document.querySelectorAll('main > section').forEach(sec => {
+        sec.style.display = 'none';
+      });
+      
+      // Show selected section
+      const sectionId = section + 'Section';
+      document.getElementById(sectionId).style.display = 'block';
+      
+      // Load data if needed
+      if (section === 'unread') {
+        elements.filterStatus.value = 'unread';
+        currentPage = 1;
+        loadMessages();
+      } else if (section === 'priority') {
+        // Filter untuk priority (butuh endpoint khusus atau filter client-side)
+        currentPage = 1;
+        loadMessages(); // TODO: Tambah filter priority di backend
+      } else if (section === 'stats') {
+        loadStats();
+      } else if (section === 'messages') {
+        resetFilters();
+      }
+    }
+
+    // ===== IMAGE VIEWER =====
+    function showImage(imageSrc) {
+      document.getElementById('modalImage').src = imageSrc;
+      document.getElementById('imageModal').classList.remove('hidden');
+    }
+
+    function closeImageModal() {
+      document.getElementById('imageModal').classList.add('hidden');
+      document.getElementById('modalImage').src = '';
+    }
+
+    // ===== TOAST NOTIFICATION =====
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.querySelector('.toast-message');
+      const toastIcon = document.querySelector('.toast-icon');
+      
+      toastMessage.textContent = message;
+      toast.className = `toast ${type}`;
+      
+      let iconClass = 'fas fa-check-circle';
+      if (type === 'error') iconClass = 'fas fa-exclamation-circle';
+      if (type === 'warning') iconClass = 'fas fa-exclamation-triangle';
+      
+      toastIcon.innerHTML = `<i class="${iconClass}"></i>`;
+      
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // ===== HELPER FUNCTIONS =====
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Close image modal with ESC key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeImageModal();
+      }
+    });
   </script>
 </body>
 </html>
