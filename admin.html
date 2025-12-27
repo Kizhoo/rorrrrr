@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - To-Kizhoo</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary: #6366f1;
@@ -124,7 +125,6 @@
             justify-content: center;
             gap: 8px;
             transition: all 0.3s ease;
-            width: 100%;
         }
         
         .btn-primary {
@@ -161,6 +161,10 @@
         .btn-small {
             padding: 8px 16px;
             font-size: 0.875rem;
+        }
+        
+        .btn-full {
+            width: 100%;
         }
         
         .admin-panel {
@@ -461,6 +465,26 @@
             white-space: pre-wrap;
         }
         
+        .message-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .message-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .message-image:hover {
+            transform: scale(1.05);
+        }
+        
         .message-actions {
             display: flex;
             gap: 8px;
@@ -554,17 +578,12 @@
             transform: translateX(26px);
         }
         
-        .radio-group {
-            display: flex;
-            gap: 15px;
-            margin-top: 10px;
-        }
-        
-        .radio-label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
+        .chart-container {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
         
         .empty-state {
@@ -661,6 +680,79 @@
             cursor: not-allowed;
         }
         
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal {
+            background: var(--dark-card);
+            padding: 30px;
+            border-radius: var(--radius);
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-lighter);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .image-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10001;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-image {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+        }
+        
+        .close-image-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+        
         @media (max-width: 768px) {
             .sidebar {
                 width: 100%;
@@ -690,6 +782,11 @@
             .filter-grid {
                 grid-template-columns: 1fr;
             }
+            
+            .modal {
+                width: 95%;
+                padding: 20px;
+            }
         }
     </style>
 </head>
@@ -713,7 +810,7 @@
                 <input type="password" id="adminPassword" class="form-input" placeholder="kizhoo2024" value="kizhoo2024">
             </div>
             
-            <button class="btn btn-primary" onclick="login()">
+            <button class="btn btn-primary btn-full" onclick="login()">
                 <i class="fas fa-sign-in-alt"></i> Login to Dashboard
             </button>
             
@@ -751,7 +848,7 @@
             </div>
             
             <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 20px;">
-                <button class="btn btn-danger" onclick="logout()" style="width: 100%;">
+                <button class="btn btn-danger btn-full" onclick="logout()">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </button>
             </div>
@@ -835,11 +932,11 @@
                         <button class="btn btn-success" onclick="markAllAsRead()">
                             <i class="fas fa-check-double"></i> Mark All as Read
                         </button>
-                        <button class="btn btn-warning" onclick="exportMessages()">
+                        <button class="btn btn-warning" onclick="showExportModal()">
                             <i class="fas fa-file-export"></i> Export Messages
                         </button>
-                        <button class="btn btn-danger" onclick="clearOldMessages()">
-                            <i class="fas fa-trash"></i> Clear Old Messages
+                        <button class="btn btn-danger" onclick="showCleanupModal()">
+                            <i class="fas fa-trash"></i> Cleanup Messages
                         </button>
                     </div>
                 </div>
@@ -976,6 +1073,7 @@
                                     <option value="10">10</option>
                                     <option value="25" selected>25</option>
                                     <option value="50">50</option>
+                                    <option value="100">100</option>
                                 </select>
                             </div>
                         </div>
@@ -1025,6 +1123,7 @@
                                     <option value="15">15</option>
                                     <option value="30" selected>30</option>
                                     <option value="60">60</option>
+                                    <option value="120">120</option>
                                 </select>
                             </div>
                             
@@ -1066,6 +1165,7 @@
                                     <option value="7">7 days</option>
                                     <option value="30" selected>30 days</option>
                                     <option value="90">90 days</option>
+                                    <option value="never">Never</option>
                                 </select>
                             </div>
                             
@@ -1090,20 +1190,111 @@
                         <h2 class="section-title">
                             <i class="fas fa-chart-bar"></i> Analytics Dashboard
                         </h2>
-                        <select class="filter-select" id="analyticsPeriod" style="width: 150px;">
+                        <select class="filter-select" id="analyticsPeriod" style="width: 150px;" onchange="loadAnalytics()">
                             <option value="today">Today</option>
                             <option value="week" selected>This Week</option>
                             <option value="month">This Month</option>
+                            <option value="year">This Year</option>
                         </select>
                     </div>
                     
-                    <div style="color: var(--text-lighter); text-align: center; padding: 40px;">
-                        <i class="fas fa-chart-line" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
-                        <div>Analytics features coming soon</div>
+                    <div id="analyticsContent">
+                        <div style="text-align: center; padding: 40px;">
+                            <div class="loading-spinner"></div>
+                            <div>Loading analytics data...</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- MODALS -->
+    <div id="exportModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Export Messages</h3>
+                <button class="modal-close" onclick="closeModal('exportModal')">&times;</button>
+            </div>
+            
+            <div class="filter-group" style="margin-bottom: 15px;">
+                <label class="filter-label">Format</label>
+                <select class="filter-select" id="exportFormat">
+                    <option value="json">JSON</option>
+                    <option value="csv">CSV</option>
+                    <option value="excel">Excel</option>
+                </select>
+            </div>
+            
+            <div class="filter-group" style="margin-bottom: 15px;">
+                <label class="filter-label">Date Range</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="date" class="filter-input" id="exportStartDate" style="flex: 1;">
+                    <span>to</span>
+                    <input type="date" class="filter-input" id="exportEndDate" style="flex: 1;" value="<?php echo date('Y-m-d'); ?>">
+                </div>
+            </div>
+            
+            <div class="filter-group" style="margin-bottom: 25px;">
+                <label class="filter-label">Category (Optional)</label>
+                <select class="filter-select" id="exportCategory">
+                    <option value="">All Categories</option>
+                    <option value="umum">General</option>
+                    <option value="pujian">Compliment</option>
+                    <option value="kritik">Critique</option>
+                    <option value="pertanyaan">Question</option>
+                    <option value="rahasia">Secret</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeModal('exportModal')" style="flex: 1;">Cancel</button>
+                <button class="btn btn-primary" onclick="performExport()" style="flex: 1;">Export</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="cleanupModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Cleanup Messages</h3>
+                <button class="modal-close" onclick="closeModal('cleanupModal')">&times;</button>
+            </div>
+            
+            <div class="filter-group" style="margin-bottom: 15px;">
+                <label class="filter-label">Action</label>
+                <select class="filter-select" id="cleanupAction" onchange="toggleDaysField()">
+                    <option value="clearOld">Delete messages older than:</option>
+                    <option value="clearRead">Delete all read messages</option>
+                    <option value="clearUnread">Delete all unread messages</option>
+                </select>
+            </div>
+            
+            <div class="filter-group" style="margin-bottom: 25px;" id="daysField">
+                <label class="filter-label">Days</label>
+                <select class="filter-select" id="cleanupDays">
+                    <option value="7">7 days</option>
+                    <option value="30" selected>30 days</option>
+                    <option value="60">60 days</option>
+                    <option value="90">90 days</option>
+                    <option value="180">180 days</option>
+                </select>
+            </div>
+            
+            <div style="color: var(--warning); margin-bottom: 20px; padding: 10px; background: rgba(245,158,11,0.1); border-radius: 8px;">
+                <i class="fas fa-exclamation-triangle"></i> Warning: This action cannot be undone!
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeModal('cleanupModal')" style="flex: 1;">Cancel</button>
+                <button class="btn btn-danger" onclick="performCleanup()" style="flex: 1;">Confirm Cleanup</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="imageModal" class="image-modal">
+        <button class="close-image-modal" onclick="closeModal('imageModal')">&times;</button>
+        <img id="modalImage" class="modal-image">
     </div>
 
     <!-- TOAST CONTAINER -->
@@ -1114,6 +1305,9 @@
         const API_BASE = window.location.origin;
         const ADMIN_API_URL = `${API_BASE}/api/admin/messages`;
         const SETTINGS_API_URL = `${API_BASE}/api/admin/settings`;
+        const ANALYTICS_API_URL = `${API_BASE}/api/admin/analytics`;
+        const EXPORT_API_URL = `${API_BASE}/api/admin/export`;
+        const CLEANUP_API_URL = `${API_BASE}/api/admin/cleanup`;
         const ADMIN_TOKEN = '1602';
         
         // ===== GLOBAL VARIABLES =====
@@ -1123,6 +1317,8 @@
         let autoRefreshInterval = null;
         let isAutoRefresh = false;
         let debounceTimer = null;
+        let analyticsChart = null;
+        let categoryChart = null;
         
         // ===== TOAST FUNCTION =====
         function showToast(message, type = 'info') {
@@ -1152,6 +1348,35 @@
             }, 4000);
         }
         
+        // ===== MODAL FUNCTIONS =====
+        function showModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        function showExportModal() {
+            const today = new Date().toISOString().split('T')[0];
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            document.getElementById('exportStartDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+            document.getElementById('exportEndDate').value = today;
+            showModal('exportModal');
+        }
+        
+        function showCleanupModal() {
+            showModal('cleanupModal');
+        }
+        
+        function toggleDaysField() {
+            const action = document.getElementById('cleanupAction').value;
+            const daysField = document.getElementById('daysField');
+            daysField.style.display = action === 'clearOld' ? 'block' : 'none';
+        }
+        
         // ===== AUTH FUNCTIONS =====
         function login() {
             const username = document.getElementById('adminUsername').value;
@@ -1159,6 +1384,7 @@
             
             if (username === 'admin' && password === 'kizhoo2024') {
                 localStorage.setItem('adminLoggedIn', 'true');
+                localStorage.setItem('adminToken', ADMIN_TOKEN);
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('adminPanel').style.display = 'block';
                 
@@ -1176,6 +1402,7 @@
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
                 localStorage.removeItem('adminLoggedIn');
+                localStorage.removeItem('adminToken');
                 document.getElementById('adminPanel').style.display = 'none';
                 document.getElementById('loginPage').style.display = 'flex';
                 showToast('Logged out successfully', 'success');
@@ -1215,6 +1442,11 @@
             };
             
             document.getElementById('pageTitle').textContent = titles[sectionId] || 'Admin Dashboard';
+            
+            // Load analytics if analytics section
+            if (sectionId === 'analytics') {
+                loadAnalytics();
+            }
         }
         
         // ===== SETTINGS FUNCTIONS =====
@@ -1316,8 +1548,9 @@
                 
                 if (data.success) {
                     showToast('Settings saved successfully', 'success');
-                    // Update sidebar site name
                     document.getElementById('sidebarSiteName').textContent = settings.site_name;
+                    itemsPerPage = parseInt(settings.items_per_page);
+                    loadMessages();
                 } else {
                     throw new Error(data.error || 'Failed to save settings');
                 }
@@ -1346,7 +1579,7 @@
                 
                 if (data.success) {
                     showToast('Settings reset to defaults', 'success');
-                    loadSettings(); // Reload the defaults
+                    loadSettings();
                 } else {
                     throw new Error(data.error || 'Failed to reset settings');
                 }
@@ -1371,7 +1604,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    displayRecentMessages(data.messages);
+                    displayMessages(data.messages, 'recentMessages');
                     updateStats(data.stats);
                     updateLastUpdateTime();
                 }
@@ -1410,7 +1643,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    displayMessages(data.messages);
+                    displayMessages(data.messages, 'messagesList');
                     updatePagination(data.total, data.pages);
                     updateStats(data.stats);
                     updateLastUpdateTime();
@@ -1426,64 +1659,8 @@
             }
         }
         
-        function displayRecentMessages(messages) {
-            const container = document.getElementById('recentMessages');
-            
-            if (!messages || messages.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-envelope-open empty-icon"></i>
-                        <div>No recent messages</div>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = '';
-            messages.forEach(msg => {
-                const timeAgo = getTimeAgo(msg.created_at);
-                const categoryName = getCategoryName(msg.category);
-                
-                html += `
-                    <div class="message-card ${msg.is_read ? '' : 'unread'} ${msg.is_priority ? 'priority' : ''}">
-                        <div class="message-header">
-                            <div class="sender-info">
-                                <div class="sender-avatar">
-                                    ${msg.sender_name ? msg.sender_name.charAt(0).toUpperCase() : 'A'}
-                                </div>
-                                <div class="sender-details">
-                                    <h4>${msg.sender_name || 'Anonymous'}</h4>
-                                    <div class="message-meta">
-                                        <span class="message-category">${categoryName}</span>
-                                        <span>${timeAgo}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="status-badges">
-                                ${!msg.is_read ? '<span class="badge badge-unread">Unread</span>' : ''}
-                                ${msg.is_priority ? '<span class="badge badge-priority">Priority</span>' : ''}
-                            </div>
-                        </div>
-                        <div class="message-content">
-                            ${msg.message.length > 200 ? msg.message.substring(0, 200) + '...' : msg.message}
-                        </div>
-                        <div class="message-actions">
-                            <button class="btn btn-small btn-primary" onclick="markAsRead('${msg.id}')">
-                                <i class="fas fa-check"></i> Mark Read
-                            </button>
-                            <button class="btn btn-small btn-danger" onclick="deleteMessage('${msg.id}')">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        function displayMessages(messages) {
-            const container = document.getElementById('messagesList');
+        function displayMessages(messages, containerId) {
+            const container = document.getElementById(containerId);
             
             if (!messages || messages.length === 0) {
                 container.innerHTML = `
@@ -1492,8 +1669,10 @@
                         <div>No messages found</div>
                     </div>
                 `;
-                document.getElementById('totalMessagesCount').textContent = '0 messages';
-                document.getElementById('pagination').style.display = 'none';
+                if (containerId === 'messagesList') {
+                    document.getElementById('totalMessagesCount').textContent = '0 messages';
+                    document.getElementById('pagination').style.display = 'none';
+                }
                 return;
             }
             
@@ -1501,6 +1680,18 @@
             messages.forEach(msg => {
                 const timeAgo = getTimeAgo(msg.created_at);
                 const categoryName = getCategoryName(msg.category);
+                const images = msg.images || [];
+                
+                let imagesHtml = '';
+                if (images.length > 0) {
+                    imagesHtml = `
+                        <div class="message-images">
+                            ${images.map((img, index) => `
+                                <img src="${img}" alt="Image ${index + 1}" class="message-image" onclick="showImage('${img}')">
+                            `).join('')}
+                        </div>
+                    `;
+                }
                 
                 html += `
                     <div class="message-card ${msg.is_read ? '' : 'unread'} ${msg.is_priority ? 'priority' : ''}">
@@ -1521,13 +1712,15 @@
                             <div class="status-badges">
                                 ${!msg.is_read ? '<span class="badge badge-unread">Unread</span>' : ''}
                                 ${msg.is_priority ? '<span class="badge badge-priority">Priority</span>' : ''}
+                                ${images.length > 0 ? `<span class="badge" style="background: rgba(16,185,129,0.1); color: var(--success);">${images.length} images</span>` : ''}
                             </div>
                         </div>
                         <div class="message-content">
                             ${msg.message}
                         </div>
+                        ${imagesHtml}
                         <div class="message-actions">
-                            <button class="btn btn-small btn-primary" onclick="markAsRead('${msg.id}')">
+                            <button class="btn btn-small btn-primary" onclick="toggleReadStatus('${msg.id}', ${msg.is_read})">
                                 <i class="fas fa-check"></i> ${msg.is_read ? 'Mark Unread' : 'Mark Read'}
                             </button>
                             <button class="btn btn-small btn-warning" onclick="togglePriority('${msg.id}', ${!msg.is_priority})">
@@ -1542,10 +1735,17 @@
             });
             
             container.innerHTML = html;
-            document.getElementById('totalMessagesCount').textContent = `${messages.length} messages`;
+            if (containerId === 'messagesList') {
+                document.getElementById('totalMessagesCount').textContent = `${messages.length} messages`;
+            }
         }
         
-        async function markAsRead(messageId) {
+        function showImage(imageUrl) {
+            document.getElementById('modalImage').src = imageUrl;
+            showModal('imageModal');
+        }
+        
+        async function toggleReadStatus(messageId, isCurrentlyRead) {
             try {
                 const response = await fetch(`${ADMIN_API_URL}/${messageId}`, {
                     method: 'PATCH',
@@ -1553,7 +1753,7 @@
                         'Authorization': `Bearer ${ADMIN_TOKEN}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ is_read: true })
+                    body: JSON.stringify({ is_read: !isCurrentlyRead })
                 });
                 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -1561,12 +1761,12 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    showToast('Message marked as read', 'success');
+                    showToast(`Message ${isCurrentlyRead ? 'marked as unread' : 'marked as read'}`, 'success');
                     loadRecentMessages();
                     loadMessages();
                 }
             } catch (error) {
-                console.error('Error marking message as read:', error);
+                console.error('Error updating message read status:', error);
                 showToast('Failed to update message', 'error');
             }
         }
@@ -1662,6 +1862,261 @@
             } catch (error) {
                 console.error('Error marking all as read:', error);
                 showToast('Failed to mark all as read', 'error');
+            }
+        }
+        
+        // ===== ANALYTICS FUNCTIONS =====
+        async function loadAnalytics() {
+            try {
+                const period = document.getElementById('analyticsPeriod').value;
+                const response = await fetch(`${ANALYTICS_API_URL}?period=${period}`, {
+                    headers: {
+                        'Authorization': `Bearer ${ADMIN_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderAnalyticsDashboard(data.analytics);
+                }
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+                document.getElementById('analyticsContent').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle empty-icon"></i>
+                        <div>Failed to load analytics</div>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderAnalyticsDashboard(analytics) {
+            // Destroy previous charts
+            if (analyticsChart) analyticsChart.destroy();
+            if (categoryChart) categoryChart.destroy();
+            
+            const html = `
+                <div class="stats-grid" style="margin-bottom: 30px;">
+                    <div class="stat-card">
+                        <div class="stat-value">${analytics.today}</div>
+                        <div class="stat-label">Today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${analytics.thisWeek}</div>
+                        <div class="stat-label">This Week</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${analytics.thisMonth}</div>
+                        <div class="stat-label">This Month</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${analytics.withImages}</div>
+                        <div class="stat-label">With Images</div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 style="margin-bottom: 15px;">Messages Over Time</h3>
+                    <canvas id="analyticsChart" height="100"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 style="margin-bottom: 15px;">Category Distribution</h3>
+                    <canvas id="categoryChart" height="100"></canvas>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+                    <div>
+                        <h4 style="margin-bottom: 10px;">Top Categories</h4>
+                        ${Object.entries(analytics.categories)
+                            .map(([cat, count]) => `
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 6px;">
+                                    <span>${getCategoryName(cat)}</span>
+                                    <span style="font-weight: 600;">${count}</span>
+                                </div>
+                            `).join('')}
+                    </div>
+                    <div>
+                        <h4 style="margin-bottom: 10px;">Activity Summary</h4>
+                        <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span>Total Messages:</span>
+                                <span>${analytics.total}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span>Unread Messages:</span>
+                                <span>${analytics.unread}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span>Priority Messages:</span>
+                                <span>${analytics.priority}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Avg per Day:</span>
+                                <span>${(analytics.total / 30).toFixed(1)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('analyticsContent').innerHTML = html;
+            
+            // Render charts
+            const ctx = document.getElementById('analyticsChart').getContext('2d');
+            analyticsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: analytics.dailyData.labels,
+                    datasets: [{
+                        label: 'Messages per Day',
+                        data: analytics.dailyData.values,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: '#94a3b8'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#94a3b8'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#94a3b8'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            categoryChart = new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(analytics.categories).map(cat => getCategoryName(cat)),
+                    datasets: [{
+                        data: Object.values(analytics.categories),
+                        backgroundColor: [
+                            '#6366f1',
+                            '#10b981',
+                            '#f59e0b',
+                            '#ef4444',
+                            '#8b5cf6'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#94a3b8'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // ===== EXPORT FUNCTIONS =====
+        async function performExport() {
+            try {
+                const format = document.getElementById('exportFormat').value;
+                const startDate = document.getElementById('exportStartDate').value;
+                const endDate = document.getElementById('exportEndDate').value;
+                const category = document.getElementById('exportCategory').value;
+                
+                let url = `${EXPORT_API_URL}?format=${format}`;
+                if (startDate) url += `&startDate=${startDate}`;
+                if (endDate) url += `&endDate=${endDate}`;
+                if (category) url += `&category=${category}`;
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${ADMIN_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `messages_${new Date().toISOString().split('T')[0]}.${format}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(downloadUrl);
+                
+                closeModal('exportModal');
+                showToast(`Messages exported successfully as ${format.toUpperCase()}`, 'success');
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                showToast('Failed to export messages', 'error');
+            }
+        }
+        
+        // ===== CLEANUP FUNCTIONS =====
+        async function performCleanup() {
+            try {
+                const action = document.getElementById('cleanupAction').value;
+                const days = document.getElementById('cleanupDays').value;
+                
+                const response = await fetch(CLEANUP_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${ADMIN_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        action, 
+                        days: action === 'clearOld' ? parseInt(days) : 30 
+                    })
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    closeModal('cleanupModal');
+                    showToast(data.message, 'success');
+                    loadRecentMessages();
+                    loadMessages();
+                }
+                
+            } catch (error) {
+                console.error('Cleanup error:', error);
+                showToast('Failed to cleanup messages', 'error');
             }
         }
         
@@ -1779,15 +2234,10 @@
         function refreshAll() {
             loadRecentMessages();
             loadMessages();
+            if (document.getElementById('analytics').classList.contains('active')) {
+                loadAnalytics();
+            }
             showToast('Data refreshed', 'success');
-        }
-        
-        function exportMessages() {
-            showToast('Export feature coming soon', 'info');
-        }
-        
-        function clearOldMessages() {
-            showToast('Clear old messages feature coming soon', 'info');
         }
         
         // ===== INITIALIZATION =====
@@ -1811,7 +2261,10 @@
         }
         
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', checkLogin);
+        document.addEventListener('DOMContentLoaded', function() {
+            checkLogin();
+            toggleDaysField(); // Initialize cleanup modal
+        });
     </script>
 </body>
-    </html>
+                        </html>
