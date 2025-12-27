@@ -5,137 +5,93 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Content-Type': 'application/json'
-};
-
-const adminAuth = (req) => {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return false;
-  }
-  const token = authHeader.split(' ')[1];
-  return token === '1602' || token === 'admin-token-sementara';
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json'
 };
 
 export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: corsHeaders
-  });
+    return new Response(null, { status: 204, headers: corsHeaders });
 }
 
-export async function GET(request) {
-  if (!adminAuth(request)) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unauthorized'
-    }), {
-      status: 401,
-      headers: corsHeaders
-    });
-  }
-
-  try {
-    const url = new URL(request.url);
-    const period = url.searchParams.get('period') || 'week';
-    
-    // Get messages for analytics
-    const { data: messages, error: messagesError } = await supabase
-      .from('messages')
-      .select('*');
-    
-    if (messagesError) throw messagesError;
-    
-    // Calculate analytics
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const monthAgo = new Date(today);
-    monthAgo.setMonth(monthAgo.getMonth() - 1);
-    
-    const analytics = {
-      total: messages.length,
-      unread: messages.filter(m => !m.is_read).length,
-      priority: messages.filter(m => m.is_priority).length,
-      today: messages.filter(m => new Date(m.created_at) >= today).length,
-      thisWeek: messages.filter(m => new Date(m.created_at) >= weekAgo).length,
-      thisMonth: messages.filter(m => new Date(m.created_at) >= monthAgo).length,
-      
-      // Category breakdown
-      categories: {
-        umum: messages.filter(m => m.category === 'umum').length,
-        pujian: messages.filter(m => m.category === 'pujian').length,
-        kritik: messages.filter(m => m.category === 'kritik').length,
-        pertanyaan: messages.filter(m => m.category === 'pertanyaan').length,
-        rahasia: messages.filter(m => m.category === 'rahasia').length
-      },
-      
-      // Daily data for chart
-      dailyData: await getDailyData(messages, period),
-      
-      // Hourly activity
-      hourlyData: getHourlyData(messages),
-      
-      // Messages with images
-      withImages: messages.filter(m => m.images && m.images.length > 0).length
-    };
-    
-    return new Response(JSON.stringify({
-      success: true,
-      analytics
-    }), {
-      status: 200,
-      headers: corsHeaders
-    });
-    
-  } catch (error) {
-    console.error('Analytics error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: error.message
-    }), {
-      status: 500,
-      headers: corsHeaders
-    });
-  }
-}
-
-async function getDailyData(messages, period) {
-  const days = period === 'month' ? 30 : period === 'week' ? 7 : 1;
-  const dailyCounts = {};
-  const now = new Date();
-  
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().split('T')[0];
-    dailyCounts[dateStr] = 0;
-  }
-  
-  messages.forEach(msg => {
-    const msgDate = new Date(msg.created_at).toISOString().split('T')[0];
-    if (dailyCounts[msgDate] !== undefined) {
-      dailyCounts[msgDate]++;
+export async function POST(request) {
+    try {
+        const formData = await request.formData();
+        const file = formData.get('image');
+        
+        if (!file) {
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'No file uploaded'
+            }), {
+                status: 400,
+                headers: corsHeaders
+            });
+        }
+        
+        // Validasi file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'File size too large (max 5MB)'
+            }), {
+                status: 400,
+                headers: corsHeaders
+            });
+        }
+        
+        // Validasi file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'Invalid file type. Allowed: JPG, PNG, GIF, WebP'
+            }), {
+                status: 400,
+                headers: corsHeaders
+            });
+        }
+        
+        // Generate unique filename
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `messages/${fileName}`;
+        
+        // Upload to Supabase Storage
+        const { data, error } = await supabase.storage
+            .from('public')
+            .upload(filePath, file, {
+                contentType: file.type,
+                upsert: false
+            });
+        
+        if (error) throw error;
+        
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+            .from('public')
+            .getPublicUrl(filePath);
+        
+        return new Response(JSON.stringify({
+            success: true,
+            imageUrl: publicUrl,
+            fileName: file.name,
+            fileSize: file.size,
+            message: 'Image uploaded successfully'
+        }), {
+            status: 200,
+            headers: corsHeaders
+        });
+        
+    } catch (error) {
+        console.error('Upload error:', error);
+        return new Response(JSON.stringify({
+            success: false,
+            error: error.message
+        }), {
+            status: 500,
+            headers: corsHeaders
+        });
     }
-  });
-  
-  return {
-    labels: Object.keys(dailyCounts),
-    values: Object.values(dailyCounts)
-  };
-}
-
-function getHourlyData(messages) {
-  const hourlyCounts = new Array(24).fill(0);
-  
-  messages.forEach(msg => {
-    const hour = new Date(msg.created_at).getHours();
-    hourlyCounts[hour]++;
-  });
-  
-  return hourlyCounts;
 }
