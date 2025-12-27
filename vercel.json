@@ -1,36 +1,37 @@
 {
   "functions": {
     "api/*.js": {
-      "maxDuration": 10
+      "maxDuration": 30
     }
   },
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Credentials", "value": "true" },
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
-        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" }
-      ]
-    }
-  ],
   "rewrites": [
-    {
-      "source": "/api/messages",
-      "destination": "/api/messages.js"
-    },
-    {
-      "source": "/api/stats",
-      "destination": "/api/messages.js"
-    },
     {
       "source": "/api/admin/messages",
       "destination": "/api/admin/messages.js"
     },
     {
+      "source": "/api/admin/messages/:id",
+      "destination": "/api/admin/messages.js"
+    },
+    {
       "source": "/api/admin/settings",
       "destination": "/api/admin/settings.js"
+    },
+    {
+      "source": "/api/admin/analytics",
+      "destination": "/api/admin/analytics.js"
+    },
+    {
+      "source": "/api/admin/export",
+      "destination": "/api/admin/export.js"
+    },
+    {
+      "source": "/api/admin/cleanup",
+      "destination": "/api/admin/cleanup.js"
+    },
+    {
+      "source": "/api/upload",
+      "destination": "/api/upload.js"
     },
     {
       "source": "/(.*)",
